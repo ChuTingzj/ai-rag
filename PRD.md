@@ -237,7 +237,10 @@
 | --- | --- |
 | LLM | **OpenRouter** 统一接入，支持配置切换模型 |
 | Embedding | **可插拔**；默认推荐 **本地 bge-m3**；可扩展 OpenRouter 或其他 |
-| 知识源 M1 | 文件上传 + 至少一种 Wiki 只读同步 |
+| 向量库 | **PostgreSQL + pgvector**；词法检索 tsvector/BM25；无独立 Qdrant |
+| 前端 | **Next.js 16.3.5**（App Router）+ **ui-ux-pro-max**（`design-system/enterprise-knowledge-assistant/`） |
+| 包管理 | **Python：uv**；**前端：pnpm**（强制，含 lockfile；`next` 钉死 `16.3.5`） |
+| 知识源 M1 | 文件上传 + 飞书 Wiki 只读同步 |
 | 部署 | 先本地/单机；预留私有化（VPC/专有云） |
 | 评测 | 自建领域 golden set + 忠实度/引用对齐；可参考 RAGAS 等方法论 |
 
@@ -307,10 +310,13 @@
 详见 [`TECH_DESIGN.md`](./TECH_DESIGN.md) §2。摘要：
 
 1. **Wiki M1**：飞书；Notion/Confluence 仅 stub。  
-2. **存储**：Qdrant（稠密+稀疏/BM25）+ PostgreSQL 16；开发机约 8GB RAM。  
+2. **存储**：**PostgreSQL 16 + pgvector**（稠密）+ tsvector/BM25（词法）；开发机约 8GB RAM；无独立 Qdrant。  
 3. **身份**：M1 本地用户 + JWT；预留 OIDC。  
 4. **Adaptive**：M2 规则 + 可选 LLM 分类（`ROUTER_MODE`）。  
 5. **回归门槛**：M3 faithfulness ≥ M2 − 0.05；M4 关系题引用命中 +10pp。  
+6. **前端设计**：统一 **ui-ux-pro-max**（`design-system/enterprise-knowledge-assistant/`）。  
+7. **包管理**：**uv**（Python）+ **pnpm**（前端）。  
+8. **前端框架**：**Next.js 16.3.5**（App Router）。  
 
 ---
 

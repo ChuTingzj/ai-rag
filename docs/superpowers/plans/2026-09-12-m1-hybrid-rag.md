@@ -4,20 +4,25 @@
 
 **Goal:** Ship a locally runnable M1 enterprise knowledge assistant: upload + Feishu sync, Hybrid+Rerank retrieval, OpenRouter cited answers, and a naive-vs-hybrid eval script.
 
-**Architecture:** FastAPI + arq worker + Postgres + Qdrant + Redis; domain logic in `packages/rag` with pluggable LLM/Embedding providers; React admin/chat UI. See [`TECH_DESIGN.md`](../../../TECH_DESIGN.md).
+**Architecture:** FastAPI + arq worker + PostgreSQL 16/pgvector + Redis; domain logic in `packages/rag` with pluggable LLM/Embedding providers; React UI per ui-ux-pro-max design system. See [`TECH_DESIGN.md`](../../../TECH_DESIGN.md).
 
-**Tech Stack:** Python 3.12, FastAPI, SQLAlchemy 2, Alembic, Qdrant, Redis/arq, sentence-transformers (bge-m3), bge-reranker, OpenRouter, Vite/React/TS, Docker Compose.
+**Tech Stack:** Python 3.12 managed by **uv**, FastAPI, SQLAlchemy 2, Alembic, **pgvector**, Redis/arq, sentence-transformers (bge-m3), bge-reranker, OpenRouter, **Next.js 16.3.5** (App Router) via **pnpm** + Phosphor + design-system tokens, Docker Compose (`pgvector/pgvector:pg16`).
 
 ## Global Constraints
 
 - LLM calls go **only** through OpenRouter (`LLMProvider` → OpenRouter).
 - Embedding is pluggable; default `local_bge_m3` (`BAAI/bge-m3`).
+- **Vector store is PostgreSQL + pgvector** (no Qdrant). Lexical = `tsvector` (optional bm25s).
 - M1 Wiki connector is **Feishu**; other connectors are stubs only.
 - ACL Gateway exists but M1 implementation is allow-all; do not skip the hook.
 - No LangChain/LlamaIndex as runtime core.
 - Every query path must support citation IDs or explicit refuse.
 - Config via environment variables; never commit secrets.
 - Follow [`TECH_DESIGN.md`](../../../TECH_DESIGN.md) module layout under `apps/` and `packages/rag/`.
+- **Frontend MUST follow** `design-system/enterprise-knowledge-assistant/MASTER.md` (+ page overrides). Icons: Phosphor only.
+- **Python package management: uv only** (`uv sync`, `uv add`, `uv run`, commit `uv.lock`). Do not use pip/Poetry as the project workflow.
+- **Frontend package management: pnpm only** (`pnpm install`, `pnpm add`, `pnpm build`, commit `pnpm-lock.yaml`). Do not use npm/yarn as the project workflow.
+- **Frontend framework: Next.js exactly `16.3.5`** (App Router). Do not use Vite SPA. Do not replace FastAPI RAG APIs with Next Route Handlers in M1.
 
 ---
 
@@ -25,7 +30,7 @@
 
 ```
 apps/api/app/{main,deps,core/config,core/security,api/*.py}
-apps/web/src/{pages,components,api.ts}
+apps/web/{app,components,styles/tokens.css,package.json,next.config.ts}
 packages/rag/{domain,providers,connectors,ingest,retrieve,generate,orchestrator,eval,acl}
 migrations/versions/*.py
 tests/...
@@ -33,6 +38,8 @@ evals/m1/golden.jsonl
 docker-compose.yml
 .env.example
 pyproject.toml
+uv.lock
+apps/web/pnpm-lock.yaml
 ```
 
 ---
@@ -40,17 +47,18 @@ pyproject.toml
 ### Task 1: Monorepo scaffold + Compose + config
 
 **Files:**
-- Create: `pyproject.toml`
+- Create: `pyproject.toml` (uv workspace: `apps/api`, `packages/rag`)
+- Create: `uv.lock` (via `uv sync`)
 - Create: `docker-compose.yml`
 - Create: `.env.example`
-- Create: `packages/rag/pyproject.toml` (or workspace table in root)
+- Create: `packages/rag/pyproject.toml`
 - Create: `apps/api/app/core/config.py`
 - Create: `apps/api/app/main.py` (health only)
-- Create: `README.md` (run instructions)
+- Create: `README.md` (run instructions with `uv` / `pnpm`)
 - Test: `tests/test_health.py`
 
 **Interfaces:**
-- Produces: `Settings` with `openrouter_api_key`, `openrouter_model`, `database_url`, `qdrant_url`, `redis_url`, `embedding_provider`, `jwt_secret`, `data_dir`
+- Produces: `Settings` with `openrouter_api_key`, `openrouter_model`, `database_url`, `redis_url`, `embedding_provider`, `embedding_dim`, `jwt_secret`, `data_dir`
 
 - [ ] **Step 1: Write failing health test**
 
@@ -68,24 +76,24 @@ def test_health():
 
 - [ ] **Step 2: Run test — expect fail (app missing)**
 
-Run: `pytest tests/test_health.py -v`  
+Run: `uv run pytest tests/test_health.py -v`  
 Expected: FAIL import or 404
 
-- [ ] **Step 3: Implement minimal FastAPI app + Settings + compose**
+- [ ] **Step 3: Implement minimal FastAPI app + Settings + compose + `uv sync`**
 
 `Settings` loads from env; `GET /health` returns `{"status":"ok"}`.  
-`docker-compose.yml` defines `postgres`, `qdrant`, `redis` (api can wait until Task 2).
+`docker-compose.yml` defines `postgres` (image `pgvector/pgvector:pg16`), `redis` (api can wait until Task 2).
 
 - [ ] **Step 4: Re-run test — expect pass**
 
-Run: `pytest tests/test_health.py -v`  
+Run: `uv run pytest tests/test_health.py -v`  
 Expected: PASS
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add pyproject.toml docker-compose.yml .env.example apps/api packages/rag README.md tests/test_health.py
-git commit -m "chore: scaffold M1 monorepo, compose, and health endpoint"
+git add pyproject.toml uv.lock docker-compose.yml .env.example apps/api packages/rag README.md tests/test_health.py
+git commit -m "chore: scaffold M1 monorepo with uv, compose, and health endpoint"
 ```
 
 ---
@@ -118,11 +126,11 @@ async def test_tables_exist(migrated_engine):
 
 - [ ] **Step 2: Run — expect fail**
 
-- [ ] **Step 3: Implement models + Alembic revision `001_m1_init`**
+- [ ] **Step 3: Implement models + Alembic revision `001_m1_init`** (`CREATE EXTENSION vector`, chunks.embedding, chunks.tsv, HNSW + GIN indexes)
 
 - [ ] **Step 4: Run migrations + test — expect pass**
 
-Run: `alembic upgrade head && pytest tests/test_db_models.py -v`
+Run: `uv run alembic upgrade head && uv run pytest tests/test_db_models.py -v`
 
 - [ ] **Step 5: Commit**
 
@@ -182,14 +190,14 @@ git commit -m "feat: add OpenRouter LLM and pluggable embedding/rerank providers
 - Create: `packages/rag/ingest/parse.py`
 - Create: `packages/rag/ingest/chunk.py`
 - Create: `packages/rag/ingest/pipeline.py`
-- Create: `packages/rag/ingest/qdrant_store.py`
+- Create: `packages/rag/ingest/pgvector_store.py`
 - Create: `apps/api/app/workers/tasks.py`
 - Test: `tests/ingest/test_chunker.py`, `tests/ingest/test_pipeline_integration.py`
 
 **Interfaces:**
 - Produces: `async def run_ingest(document_id: UUID) -> IndexJobStats`
 - Produces: `Chunker.split(text) -> list[ChunkDraft]` with `parent_text` / `child_text`
-- Consumes: `EmbeddingProvider`, Qdrant client, DB session
+- Consumes: `EmbeddingProvider`, asyncpg/SQLAlchemy session (pgvector upsert)
 
 - [ ] **Step 1: Chunker unit tests (parent/child counts, non-empty)**
 
@@ -203,14 +211,14 @@ def test_parent_child_chunker_basic():
 
 - [ ] **Step 2: Run — fail**
 
-- [ ] **Step 3: Implement parser (md/txt/pdf/docx), chunker, Qdrant upsert, arq task `ingest_document`**
+- [ ] **Step 3: Implement parser (md/txt/pdf/docx), chunker, pgvector+tsv upsert, arq task `ingest_document`**
 
-- [ ] **Step 4: Integration test with Qdrant testcontainer or compose — pass**
+- [ ] **Step 4: Integration test against compose Postgres — pass**
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git commit -m "feat: implement ingest pipeline with parent-child chunking"
+git commit -m "feat: implement ingest pipeline with parent-child chunking and pgvector"
 ```
 
 ---
@@ -243,7 +251,7 @@ def test_rrf_prefers_overlap():
 
 - [ ] **Step 2: Run — fail**
 
-- [ ] **Step 3: Implement dense Qdrant search + sparse/BM25 + RRF + rerank + packer + ACL noop**
+- [ ] **Step 3: Implement dense pgvector search + tsv/BM25 + RRF + rerank + packer + ACL noop**
 
 - [ ] **Step 4: Tests pass**
 
@@ -362,28 +370,40 @@ git commit -m "feat: add Feishu read-only connector and sync job"
 
 ---
 
-### Task 9: Web UI — login, KB, upload, chat with citations
+### Task 9: Web UI — Next.js 16.3.5 + ui-ux-pro-max + login/KB/chat
 
 **Files:**
-- Create: `apps/web/*` Vite React app
-- Create: `apps/web/src/pages/{Login,Chat,KnowledgeBaseDetail}.tsx`
-- Test: `apps/web` smoke via Playwright optional; at minimum TypeScript build
+- Create: `apps/web` Next.js App Router app with `"next": "16.3.5"` pinned
+- Create: `apps/web/styles/tokens.css` (map MASTER CSS variables)
+- Create: `apps/web/app/login/page.tsx`, `apps/web/app/page.tsx`, `apps/web/app/kbs/...`
+- Create: `apps/web/next.config.ts` (`output: 'standalone'`; optional rewrite `/api` → FastAPI)
+- Read first: `design-system/enterprise-knowledge-assistant/MASTER.md` + matching `pages/*.md`
+- Test: `pnpm --dir apps/web build`; visual checklist against MASTER pre-delivery list
 
 **Interfaces:**
-- Consumes: `/api/v1/*`
+- Consumes: FastAPI `/api/v1/*` via `NEXT_PUBLIC_API_BASE_URL` or rewrites
+- UI constraints: Phosphor icons; Plus Jakarta Sans; Flat teal/orange; skeletons + aria-busy on query; citation side panel on chat
 
-- [ ] **Step 1: Scaffold Vite React TS; proxy `/api` to backend**
-
-- [ ] **Step 2: Login + KB list/create + upload + job polling**
-
-- [ ] **Step 3: Chat page renders answer + citation list linking to snippet**
-
-- [ ] **Step 4: `npm run build` succeeds; manual checklist in README**
-
-- [ ] **Step 5: Commit**
+- [ ] **Step 1: Scaffold with pnpm + exact Next version**
 
 ```bash
-git commit -m "feat: add M1 web UI for KB admin and cited chat"
+cd apps && pnpm create next-app@16.3.5 web --typescript --eslint --app --src-dir=false --tailwind=false --import-alias="@/*"
+cd web && pnpm add next@16.3.5 && pnpm add @phosphor-icons/react
+```
+
+Verify `package.json` has `"next": "16.3.5"`. Add `styles/tokens.css` from MASTER.
+
+- [ ] **Step 2: Login page per `pages/login.md` (labels, submit feedback)**
+
+- [ ] **Step 3: KB list/detail per `pages/knowledge-base.md` (upload, sync, job status)**
+
+- [ ] **Step 4: Chat per `pages/chat.md` — answer + citation panel + loading skeleton**
+
+- [ ] **Step 5: `pnpm --dir apps/web build` + commit**
+
+```bash
+git add apps/web
+git commit -m "feat: add M1 Next.js 16.3.5 web UI with ui-ux-pro-max design system"
 ```
 
 ---
@@ -398,7 +418,7 @@ git commit -m "feat: add M1 web UI for KB admin and cited chat"
 - Test: `tests/eval/test_run_naive_vs_hybrid.py`
 
 **Interfaces:**
-- Produces: CLI `python -m rag.eval.run --pipeline naive|hybrid --out reports/m1.json`
+- Produces: CLI `uv run python -m rag.eval.run --pipeline naive|hybrid --out reports/m1.json`
 - Metrics: `retrieval_hit_rate`, `citation_precision`
 
 - [ ] **Step 1: Add ≥20 golden questions (can use synthetic docs under `evals/m1/corpus/`)**
