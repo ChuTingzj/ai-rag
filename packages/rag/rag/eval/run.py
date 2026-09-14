@@ -14,8 +14,8 @@ from providers.registry import Settings
 
 
 def _default_golden() -> Path:
-    pkg_root = Path(__file__).resolve().parents[3]
-    return pkg_root.parent.parent / "evals" / "m1" / "golden.jsonl"
+    repo_root = Path(__file__).resolve().parents[4]
+    return repo_root / "evals" / "m1" / "golden.jsonl"
 
 
 def _async_database_url() -> str:
