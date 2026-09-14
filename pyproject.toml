@@ -1,0 +1,34 @@
+[project]
+name = "ai-rag"
+version = "0.1.0"
+description = "Enterprise hybrid RAG platform (M1)"
+requires-python = ">=3.12"
+dependencies = [
+    "api",
+    "fastapi>=0.115.0",
+    "httpx>=0.28.0",
+    "pydantic-settings>=2.6.0",
+    "uvicorn[standard]>=0.32.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=1.4.0",
+    "pytest-httpx>=0.35.0",
+]
+
+[tool.uv.workspace]
+members = ["apps/api", "packages/rag"]
+
+[tool.uv.sources]
+api = { workspace = true }
+rag = { workspace = true }
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+pythonpath = [".", "apps/api", "packages/rag"]
+testpaths = ["tests"]
+asyncio_mode = "auto"
