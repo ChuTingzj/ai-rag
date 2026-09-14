@@ -27,10 +27,12 @@ packages = [
     "connectors",
     "db",
     "domain",
+    "eval",
     "generate",
     "ingest",
     "orchestrator",
     "providers",
+    "rag",
     "rag_lib",
     "retrieve",
 ]

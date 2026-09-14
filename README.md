@@ -49,7 +49,17 @@ pnpm dev
 
 - `apps/api` — FastAPI application
 - `packages/rag` — domain library (ingest, retrieve, generate)
+- `evals/m1/` — golden questions + synthetic corpus for M1 eval
 - `tests/` — integration and unit tests
 - `docker-compose.yml` — Postgres (pgvector) + Redis
 
 Python packages are managed **only** with `uv` (`uv sync`, `uv add`, `uv run`). Commit `uv.lock`.
+
+## M1 acceptance checklist
+
+- [ ] `docker compose up -d postgres redis` and `uv run alembic upgrade head`
+- [ ] `uv run pytest tests/ -v` passes (Postgres on `localhost:15432`)
+- [ ] `uv run python -m rag.eval.run --pipeline hybrid --compare --out reports/m1.json` — metrics include `retrieval_hit_rate` and `citation_precision`; hybrid hit rate should meet or beat naive (warning only if not)
+- [ ] `./scripts/smoke_m1.sh` indexes `evals/m1/corpus` and writes `reports/smoke-m1.json`
+- [ ] `GET /health` returns `{"status":"ok"}`; optional authenticated `POST /api/v1/query` with `SMOKE_JWT`
+- [ ] Ingest + hybrid retrieval + cited answers via API (see `tests/api/test_query_flow.py`)

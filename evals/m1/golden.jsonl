@@ -1,0 +1,24 @@
+{"id": "q001", "question": "What is the policy value for TOKEN_EXPENSE_3000?", "kb": "m1-eval", "must_include_doc_ids": ["expense-policy"], "forbidden_doc_ids": []}
+{"id": "q002", "question": "Explain TOKEN_EXPENSE_3000 in the Expense Policy document.", "kb": "m1-eval", "must_include_doc_ids": ["expense-policy"], "forbidden_doc_ids": []}
+{"id": "q003", "question": "Which document mentions TOKEN_EXPENSE_3000?", "kb": "m1-eval", "must_include_doc_ids": ["expense-policy"], "forbidden_doc_ids": []}
+{"id": "q004", "question": "What is the policy value for TOKEN_TRAVEL_500?", "kb": "m1-eval", "must_include_doc_ids": ["travel-policy"], "forbidden_doc_ids": []}
+{"id": "q005", "question": "Explain TOKEN_TRAVEL_500 in the Travel Policy document.", "kb": "m1-eval", "must_include_doc_ids": ["travel-policy"], "forbidden_doc_ids": []}
+{"id": "q006", "question": "Which document mentions TOKEN_TRAVEL_500?", "kb": "m1-eval", "must_include_doc_ids": ["travel-policy"], "forbidden_doc_ids": []}
+{"id": "q007", "question": "What is the policy value for TOKEN_REMOTE_2DAYS?", "kb": "m1-eval", "must_include_doc_ids": ["remote-work"], "forbidden_doc_ids": []}
+{"id": "q008", "question": "Explain TOKEN_REMOTE_2DAYS in the Remote Work document.", "kb": "m1-eval", "must_include_doc_ids": ["remote-work"], "forbidden_doc_ids": []}
+{"id": "q009", "question": "Which document mentions TOKEN_REMOTE_2DAYS?", "kb": "m1-eval", "must_include_doc_ids": ["remote-work"], "forbidden_doc_ids": []}
+{"id": "q010", "question": "What is the policy value for TOKEN_SEC_MFA?", "kb": "m1-eval", "must_include_doc_ids": ["security-policy"], "forbidden_doc_ids": []}
+{"id": "q011", "question": "Explain TOKEN_SEC_MFA in the Security Policy document.", "kb": "m1-eval", "must_include_doc_ids": ["security-policy"], "forbidden_doc_ids": []}
+{"id": "q012", "question": "Which document mentions TOKEN_SEC_MFA?", "kb": "m1-eval", "must_include_doc_ids": ["security-policy"], "forbidden_doc_ids": []}
+{"id": "q013", "question": "What is the policy value for TOKEN_PTO_15D?", "kb": "m1-eval", "must_include_doc_ids": ["pto-policy"], "forbidden_doc_ids": []}
+{"id": "q014", "question": "Explain TOKEN_PTO_15D in the PTO Policy document.", "kb": "m1-eval", "must_include_doc_ids": ["pto-policy"], "forbidden_doc_ids": []}
+{"id": "q015", "question": "Which document mentions TOKEN_PTO_15D?", "kb": "m1-eval", "must_include_doc_ids": ["pto-policy"], "forbidden_doc_ids": []}
+{"id": "q016", "question": "What is the policy value for TOKEN_HW_LAPTOP?", "kb": "m1-eval", "must_include_doc_ids": ["hardware-policy"], "forbidden_doc_ids": []}
+{"id": "q017", "question": "Explain TOKEN_HW_LAPTOP in the Hardware Policy document.", "kb": "m1-eval", "must_include_doc_ids": ["hardware-policy"], "forbidden_doc_ids": []}
+{"id": "q018", "question": "Which document mentions TOKEN_HW_LAPTOP?", "kb": "m1-eval", "must_include_doc_ids": ["hardware-policy"], "forbidden_doc_ids": []}
+{"id": "q019", "question": "What is the policy value for TOKEN_ONBOARD_30D?", "kb": "m1-eval", "must_include_doc_ids": ["onboarding"], "forbidden_doc_ids": []}
+{"id": "q020", "question": "Explain TOKEN_ONBOARD_30D in the Onboarding document.", "kb": "m1-eval", "must_include_doc_ids": ["onboarding"], "forbidden_doc_ids": []}
+{"id": "q021", "question": "Which document mentions TOKEN_ONBOARD_30D?", "kb": "m1-eval", "must_include_doc_ids": ["onboarding"], "forbidden_doc_ids": []}
+{"id": "q022", "question": "What is the policy value for TOKEN_CONDUCT_RESPECT?", "kb": "m1-eval", "must_include_doc_ids": ["code-conduct"], "forbidden_doc_ids": []}
+{"id": "q023", "question": "Explain TOKEN_CONDUCT_RESPECT in the Code of Conduct document.", "kb": "m1-eval", "must_include_doc_ids": ["code-conduct"], "forbidden_doc_ids": []}
+{"id": "q024", "question": "Which document mentions TOKEN_CONDUCT_RESPECT?", "kb": "m1-eval", "must_include_doc_ids": ["code-conduct"], "forbidden_doc_ids": []}
