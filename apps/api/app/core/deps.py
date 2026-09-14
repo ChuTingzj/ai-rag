@@ -30,11 +30,24 @@ class IngestQueue(Protocol):
     async def enqueue(self, document_id: uuid.UUID) -> None: ...
 
 
+class SyncQueue(Protocol):
+    async def enqueue(self, kb_id: uuid.UUID, *, job_id: uuid.UUID) -> None: ...
+
+
 class ArqIngestQueue:
     async def enqueue(self, document_id: uuid.UUID) -> None:
         pool = await create_pool(RedisSettings.from_dsn(settings.redis_url))
         try:
             await pool.enqueue_job("ingest_document", str(document_id))
+        finally:
+            await pool.close()
+
+
+class ArqSyncQueue:
+    async def enqueue(self, kb_id: uuid.UUID, *, job_id: uuid.UUID) -> None:
+        pool = await create_pool(RedisSettings.from_dsn(settings.redis_url))
+        try:
+            await pool.enqueue_job("sync_feishu", str(kb_id), str(job_id))
         finally:
             await pool.close()
 
@@ -84,6 +97,10 @@ async def get_current_user(
 
 def get_ingest_queue() -> IngestQueue:
     return ArqIngestQueue()
+
+
+def get_sync_queue() -> SyncQueue:
+    return ArqSyncQueue()
 
 
 def get_orchestrator(

@@ -105,3 +105,23 @@ class QueryResponseOut(BaseModel):
     route: str
     refuse_reason: str | None
     trace_id: uuid.UUID
+
+
+class FeishuConnectorCreate(BaseModel):
+    app_id: str
+    app_secret: str
+    space_id: str
+
+
+class ConnectorOut(BaseModel):
+    id: uuid.UUID
+    kb_id: uuid.UUID | None
+    type: str | None
+    enabled: bool | None
+    cursor: str | None
+
+    model_config = {"from_attributes": True}
+
+
+class SyncTriggerOut(BaseModel):
+    job_id: uuid.UUID

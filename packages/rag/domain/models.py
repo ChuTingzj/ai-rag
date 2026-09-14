@@ -79,6 +79,10 @@ class RawDocument(BaseModel):
     content: bytes
     meta: dict[str, Any] = Field(default_factory=dict)
 
+    @property
+    def text(self) -> str:
+        return self.content.decode("utf-8")
+
 
 class ChangePage(BaseModel):
     changes: list[dict[str, Any]] = Field(default_factory=list)
