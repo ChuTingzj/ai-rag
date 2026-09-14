@@ -165,3 +165,46 @@ def test_register_kb_upload_wait_query(api_client: TestClient, tmp_path):
     cite = payload["citations"][0]
     assert cite["evidence_id"]
     assert cite.get("title") == "expense.md" or cite.get("title")
+
+
+def test_query_rejects_foreign_kb_id(api_client: TestClient):
+    owner_email = f"owner-{uuid.uuid4()}@example.com"
+    attacker_email = f"attacker-{uuid.uuid4()}@example.com"
+    password = "secure-pass-123"
+
+    owner_reg = api_client.post(
+        "/api/v1/auth/register",
+        json={"email": owner_email, "password": password},
+    )
+    assert owner_reg.status_code == 201, owner_reg.text
+    owner_token = api_client.post(
+        "/api/v1/auth/login",
+        json={"email": owner_email, "password": password},
+    ).json()["access_token"]
+    owner_headers = _auth_headers(owner_token)
+
+    kb = api_client.post(
+        "/api/v1/knowledge-bases",
+        headers=owner_headers,
+        json={"name": "Private KB", "description": "owner only"},
+    )
+    assert kb.status_code == 201, kb.text
+    foreign_kb_id = kb.json()["id"]
+
+    attacker_reg = api_client.post(
+        "/api/v1/auth/register",
+        json={"email": attacker_email, "password": password},
+    )
+    assert attacker_reg.status_code == 201, attacker_reg.text
+    attacker_token = api_client.post(
+        "/api/v1/auth/login",
+        json={"email": attacker_email, "password": password},
+    ).json()["access_token"]
+    attacker_headers = _auth_headers(attacker_token)
+
+    denied = api_client.post(
+        "/api/v1/query",
+        headers=attacker_headers,
+        json={"question": "费用上限是多少？", "kb_ids": [foreign_kb_id]},
+    )
+    assert denied.status_code == 403, denied.text

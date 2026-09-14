@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncGenerator
+from functools import lru_cache
 from typing import Annotated, Protocol
 
 from arq import create_pool
@@ -103,15 +104,48 @@ def get_sync_queue() -> SyncQueue:
     return ArqSyncQueue()
 
 
+def _rag_settings_cache_key(cfg: RagSettings) -> tuple:
+    return (
+        cfg.openrouter_api_key,
+        cfg.openrouter_model,
+        cfg.openrouter_base_url,
+        cfg.embedding_provider,
+        cfg.embedding_model,
+        cfg.embedding_dim,
+        cfg.rerank_provider,
+        cfg.rerank_model,
+        cfg.data_dir,
+    )
+
+
+@lru_cache(maxsize=8)
+def _cached_hybrid_retriever(settings_key: tuple, session_factory_id: int) -> HybridRetriever:
+    cfg = RagSettings(
+        openrouter_api_key=settings_key[0],
+        openrouter_model=settings_key[1],
+        openrouter_base_url=settings_key[2],
+        embedding_provider=settings_key[3],
+        embedding_model=settings_key[4],
+        embedding_dim=settings_key[5],
+        rerank_provider=settings_key[6],
+        rerank_model=settings_key[7],
+        data_dir=settings_key[8],
+    )
+    return HybridRetriever(
+        async_session_factory,
+        embedding=get_embedding(cfg),
+        reranker=get_reranker(cfg),
+        settings=cfg,
+    )
+
+
 def get_orchestrator(
     rag_settings: Annotated[RagSettings, Depends(get_rag_settings)],
     llm: Annotated[LLMProvider, Depends(get_llm)],
 ) -> OrchestratorService:
-    retriever = HybridRetriever(
-        async_session_factory,
-        embedding=get_embedding(rag_settings),
-        reranker=get_reranker(rag_settings),
-        settings=rag_settings,
+    retriever = _cached_hybrid_retriever(
+        _rag_settings_cache_key(rag_settings),
+        id(async_session_factory),
     )
     return OrchestratorService(
         retriever=retriever,

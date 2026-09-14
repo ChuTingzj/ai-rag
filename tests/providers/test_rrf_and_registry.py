@@ -10,6 +10,14 @@ def test_get_llm_returns_openrouter():
     assert isinstance(llm, OpenRouterLLM)
 
 
+def test_provider_factories_are_cached_per_config():
+    settings = Settings(embedding_provider="hash_stub", embedding_dim=128, rerank_provider="stub")
+    assert get_embedding(settings) is get_embedding(settings)
+    assert get_reranker(settings) is get_reranker(settings)
+    llm_settings = Settings(openrouter_api_key="cache-test")
+    assert get_llm(llm_settings) is get_llm(llm_settings)
+
+
 @pytest.mark.asyncio
 async def test_hash_stub_embedding_is_deterministic():
     settings = Settings(embedding_provider="hash_stub", embedding_dim=128)
