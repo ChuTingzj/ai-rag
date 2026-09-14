@@ -1,5 +1,6 @@
-"""Re-export ORM models from packages/rag for Alembic and the API."""
+"""SQLAlchemy ORM models shared by ingest and the API."""
 
+from db.base import Base
 from db.models import (
     Chunk,
     Connector,
@@ -11,6 +12,7 @@ from db.models import (
 )
 
 __all__ = [
+    "Base",
     "Chunk",
     "Connector",
     "Document",

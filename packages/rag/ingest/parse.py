@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+from io import BytesIO
 from pathlib import Path
+
+import fitz
+from docx import Document as DocxDocument
 
 _MIME_ALIASES = {
     ".md": "text/markdown",
@@ -40,8 +44,6 @@ def _guess_mime(path: Path) -> str:
 
 
 def _parse_pdf(data: bytes) -> str:
-    import fitz
-
     doc = fitz.open(stream=data, filetype="pdf")
     try:
         parts = [page.get_text("text") for page in doc]
@@ -51,9 +53,5 @@ def _parse_pdf(data: bytes) -> str:
 
 
 def _parse_docx(data: bytes) -> str:
-    from io import BytesIO
-
-    from docx import Document
-
-    document = Document(BytesIO(data))
+    document = DocxDocument(BytesIO(data))
     return "\n".join(p.text for p in document.paragraphs if p.text.strip())

@@ -15,7 +15,7 @@ from ingest.pipeline import run_ingest
 def _async_database_url() -> str:
     url = os.environ.get(
         "DATABASE_URL",
-        "postgresql+asyncpg://rag:rag@localhost:5432/rag",
+        "postgresql+asyncpg://rag:rag@localhost:15432/rag",
     )
     return url
 

@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.db.models import Document, IndexJob
+from db.models import Document, IndexJob
 from domain.protocols import EmbeddingProvider
 from ingest.chunk import ParentChildChunker
 from ingest.parse import parse_file

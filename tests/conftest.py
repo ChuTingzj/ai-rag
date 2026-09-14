@@ -11,7 +11,7 @@ from sqlalchemy.engine import Engine
 def _sync_database_url() -> str:
     url = os.environ.get(
         "DATABASE_URL",
-        "postgresql+asyncpg://rag:rag@localhost:5432/rag",
+        "postgresql+asyncpg://rag:rag@localhost:15432/rag",
     )
     if url.startswith("postgresql+asyncpg://"):
         return url.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)

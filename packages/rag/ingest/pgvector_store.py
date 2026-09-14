@@ -7,7 +7,7 @@ import jieba
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Chunk
+from db.models import Chunk
 
 
 def tokenize_for_tsv(text: str) -> str:

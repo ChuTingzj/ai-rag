@@ -1416,6 +1416,7 @@ source = { editable = "packages/rag" }
 dependencies = [
     { name = "httpx" },
     { name = "jieba" },
+    { name = "pgvector" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "pymupdf" },
@@ -1432,6 +1433,7 @@ local-ml = [
 requires-dist = [
     { name = "httpx", specifier = ">=0.28.0" },
     { name = "jieba", specifier = ">=0.42.1" },
+    { name = "pgvector", specifier = ">=0.5.0" },
     { name = "pydantic", specifier = ">=2.13.5" },
     { name = "pydantic-settings", specifier = ">=2.6.0" },
     { name = "pymupdf", specifier = ">=1.28.2" },
