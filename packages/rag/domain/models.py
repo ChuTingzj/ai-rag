@@ -23,6 +23,10 @@ class LLMResult(BaseModel):
     model: str
     usage: dict[str, int] = Field(default_factory=dict)
 
+    @property
+    def text(self) -> str:
+        return self.content
+
 
 class RerankHit(BaseModel):
     index: int

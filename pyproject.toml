@@ -15,6 +15,7 @@ dependencies = [
 dev = [
     "pytest>=8.3.0",
     "pytest-asyncio>=1.4.0",
+    "pytest-httpx>=0.35.0",
 ]
 
 [tool.uv.workspace]
@@ -28,6 +29,6 @@ rag = { workspace = true }
 package = false
 
 [tool.pytest.ini_options]
-pythonpath = [".", "apps/api"]
+pythonpath = [".", "apps/api", "packages/rag"]
 testpaths = ["tests"]
 asyncio_mode = "auto"
