@@ -18,7 +18,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "16379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -35,7 +35,7 @@ services:
       - .:/app
       - ./data:/data
     environment:
-      DATABASE_URL: postgresql+asyncpg://rag:rag@postgres:5432/rag
+      DATABASE_URL: postgresql+asyncpg://rag:rag@postgres:15432/rag
       REDIS_URL: redis://redis:6379
       EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-local_bge_m3}
       EMBEDDING_DIM: ${EMBEDDING_DIM:-1024}
