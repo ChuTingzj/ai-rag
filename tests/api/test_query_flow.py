@@ -208,3 +208,96 @@ def test_query_rejects_foreign_kb_id(api_client: TestClient):
         json={"question": "费用上限是多少？", "kb_ids": [foreign_kb_id]},
     )
     assert denied.status_code == 403, denied.text
+
+
+def test_query_empty_kb_ids_scopes_to_owned_only(api_client: TestClient, tmp_path):
+    owner_email = f"owner-{uuid.uuid4()}@example.com"
+    other_email = f"other-{uuid.uuid4()}@example.com"
+    password = "secure-pass-123"
+
+    owner_token = api_client.post(
+        "/api/v1/auth/register",
+        json={"email": owner_email, "password": password},
+    )
+    assert owner_token.status_code == 201, owner_token.text
+    owner_headers = _auth_headers(
+        api_client.post(
+            "/api/v1/auth/login",
+            json={"email": owner_email, "password": password},
+        ).json()["access_token"]
+    )
+
+    kb = api_client.post(
+        "/api/v1/knowledge-bases",
+        headers=owner_headers,
+        json={"name": "Owner KB", "description": "secret"},
+    )
+    assert kb.status_code == 201, kb.text
+    kb_id = kb.json()["id"]
+
+    md = tmp_path / "secret.md"
+    md.write_text(
+        "# Secret\n\n费用上限为 3000 元。\n\n" + ("detail " * 40),
+        encoding="utf-8",
+    )
+    with md.open("rb") as fh:
+        upload = api_client.post(
+            f"/api/v1/knowledge-bases/{kb_id}/documents",
+            headers=owner_headers,
+            files={"file": ("secret.md", fh, "text/markdown")},
+        )
+    assert upload.status_code == 201, upload.text
+    job_id = upload.json()["job_id"]
+    deadline = time.time() + 30
+    state = "pending"
+    while time.time() < deadline:
+        job = api_client.get(f"/api/v1/jobs/{job_id}", headers=owner_headers)
+        state = job.json()["state"]
+        if state in ("succeeded", "failed"):
+            break
+        time.sleep(0.2)
+    assert state == "succeeded", job.json()
+
+    owned_empty = api_client.post(
+        "/api/v1/query",
+        headers=owner_headers,
+        json={"question": "费用上限是多少？", "kb_ids": []},
+    )
+    assert owned_empty.status_code == 200, owned_empty.text
+    assert "3000" in owned_empty.json()["answer"] or owned_empty.json()["citations"]
+
+    other_reg = api_client.post(
+        "/api/v1/auth/register",
+        json={"email": other_email, "password": password},
+    )
+    assert other_reg.status_code == 201, other_reg.text
+    other_headers = _auth_headers(
+        api_client.post(
+            "/api/v1/auth/login",
+            json={"email": other_email, "password": password},
+        ).json()["access_token"]
+    )
+
+    no_kb = api_client.post(
+        "/api/v1/query",
+        headers=other_headers,
+        json={"question": "费用上限是多少？", "kb_ids": []},
+    )
+    assert no_kb.status_code == 400, no_kb.text
+
+    other_kb = api_client.post(
+        "/api/v1/knowledge-bases",
+        headers=other_headers,
+        json={"name": "Other empty KB", "description": "no docs"},
+    )
+    assert other_kb.status_code == 201, other_kb.text
+
+    scoped = api_client.post(
+        "/api/v1/query",
+        headers=other_headers,
+        json={"question": "费用上限是多少？", "kb_ids": []},
+    )
+    assert scoped.status_code == 200, scoped.text
+    payload = scoped.json()
+    assert "3000" not in payload["answer"]
+    assert payload["refuse_reason"] is not None or not payload["citations"]
