@@ -27,6 +27,26 @@ services:
       timeout: 3s
       retries: 5
 
+  worker:
+    image: python:3.12-slim
+    working_dir: /app
+    command: ["sh", "-c", "pip install -q uv && uv sync && uv run arq app.workers.tasks.WorkerSettings"]
+    volumes:
+      - .:/app
+      - ./data:/data
+    environment:
+      DATABASE_URL: postgresql+asyncpg://rag:rag@postgres:5432/rag
+      REDIS_URL: redis://redis:6379
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-local_bge_m3}
+      EMBEDDING_DIM: ${EMBEDDING_DIM:-1024}
+      DATA_DIR: /data
+      PYTHONPATH: /app/apps/api:/app/packages/rag
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   redis_data:

@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import joinedload
 
 from db.models import Chunk, Document
-from domain.models import Evidence, RerankHit
+from domain.models import Evidence, QueryContext, RerankHit
 from domain.protocols import EmbeddingProvider, RerankProvider
 from ingest.pgvector_store import tokenize_for_tsv
 from providers.registry import Settings, get_embedding, get_reranker
@@ -35,6 +35,14 @@ class HybridRetriever:
         self._reranker = reranker or get_reranker(cfg)
 
     async def retrieve(
+        self,
+        context: QueryContext,
+        *,
+        top_k: int = 8,
+    ) -> list[Evidence]:
+        return await self._retrieve_impl(context.question, context.kb_ids, top_k=top_k)
+
+    async def _retrieve_impl(
         self,
         query: str,
         kb_ids: list[uuid.UUID],

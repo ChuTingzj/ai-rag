@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from acl.gateway import AclGateway
 from db.models import Document, KnowledgeBase
-from domain.models import Evidence
+from domain.models import Evidence, QueryContext
 from ingest.pipeline import run_ingest
 from providers.registry import Settings
 from retrieve.hybrid import HybridRetriever
@@ -117,8 +117,10 @@ async def test_hybrid_retriever_reranks_and_returns_parent_text(
     )
     retriever = HybridRetriever(async_session_factory, settings=settings)
     hits = await retriever.retrieve(
-        "expense limit hybrid retrieve",
-        [kb_id],
+        QueryContext(
+            question="expense limit hybrid retrieve",
+            kb_ids=[kb_id],
+        ),
         top_k=3,
     )
     assert hits

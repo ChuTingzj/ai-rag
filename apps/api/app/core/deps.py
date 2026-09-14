@@ -1,0 +1,105 @@
+from __future__ import annotations
+
+import uuid
+from collections.abc import AsyncGenerator
+from typing import Annotated, Protocol
+
+from arq import create_pool
+from arq.connections import RedisSettings
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+from acl.gateway import AclGateway
+from app.core.config import settings
+from app.core.security import decode_access_token
+from app.db.models import User
+from app.db.session import async_session_factory
+from domain.protocols import LLMProvider
+from generate.generator import Generator
+from orchestrator.service import OrchestratorService
+from providers.registry import Settings as RagSettings
+from providers.registry import get_embedding, get_llm as build_llm, get_reranker
+from retrieve.hybrid import HybridRetriever
+from retrieve.packer import ContextPacker
+
+_bearer = HTTPBearer(auto_error=False)
+
+
+class IngestQueue(Protocol):
+    async def enqueue(self, document_id: uuid.UUID) -> None: ...
+
+
+class ArqIngestQueue:
+    async def enqueue(self, document_id: uuid.UUID) -> None:
+        pool = await create_pool(RedisSettings.from_dsn(settings.redis_url))
+        try:
+            await pool.enqueue_job("ingest_document", str(document_id))
+        finally:
+            await pool.close()
+
+
+async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
+    async with async_session_factory() as session:
+        yield session
+
+
+def get_rag_settings() -> RagSettings:
+    return RagSettings(
+        openrouter_api_key=settings.openrouter_api_key,
+        openrouter_model=settings.openrouter_model,
+        openrouter_base_url=settings.openrouter_base_url,
+        embedding_provider=settings.embedding_provider,
+        embedding_model=settings.embedding_model,
+        embedding_dim=settings.embedding_dim,
+        rerank_provider=settings.rerank_provider,
+        rerank_model=settings.rerank_model,
+        data_dir=settings.data_dir,
+    )
+
+
+def get_llm(rag_settings: Annotated[RagSettings, Depends(get_rag_settings)]) -> LLMProvider:
+    return build_llm(rag_settings)
+
+
+async def get_current_user(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
+    session: Annotated[AsyncSession, Depends(get_async_session)],
+) -> User:
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    try:
+        user_id = decode_access_token(credentials.credentials)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+        ) from exc
+
+    user = await session.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    return user
+
+
+def get_ingest_queue() -> IngestQueue:
+    return ArqIngestQueue()
+
+
+def get_orchestrator(
+    rag_settings: Annotated[RagSettings, Depends(get_rag_settings)],
+    llm: Annotated[LLMProvider, Depends(get_llm)],
+) -> OrchestratorService:
+    retriever = HybridRetriever(
+        async_session_factory,
+        embedding=get_embedding(rag_settings),
+        reranker=get_reranker(rag_settings),
+        settings=rag_settings,
+    )
+    return OrchestratorService(
+        retriever=retriever,
+        acl=AclGateway(),
+        packer=ContextPacker(),
+        generator=Generator(llm, model=rag_settings.openrouter_model),
+    )
+
