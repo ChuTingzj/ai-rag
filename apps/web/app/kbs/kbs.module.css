@@ -1,0 +1,118 @@
+.page {
+  padding: var(--space-lg);
+  flex: 1;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.table th,
+.table td {
+  padding: var(--space-sm) var(--space-md);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table th {
+  background: var(--color-muted);
+  font-weight: 600;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.table a {
+  color: var(--color-primary);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.table a:hover {
+  text-decoration: underline;
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(15 23 42 / 35%);
+  display: grid;
+  place-items: center;
+  z-index: 50;
+  padding: var(--space-md);
+}
+
+.modal {
+  width: min(420px, 100%);
+}
+
+.tabs {
+  display: flex;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tab {
+  padding: var(--space-sm) var(--space-md);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  color: var(--color-muted-foreground);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.tabActive {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+.uploadZone {
+  border: 2px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-xl);
+  text-align: center;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.uploadZone:hover {
+  background: color-mix(in srgb, var(--color-primary) 6%, white);
+}
+
+.jobRow {
+  font-size: 0.8125rem;
+  padding: var(--space-sm);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.jobError {
+  color: var(--color-destructive);
+  margin-top: var(--space-xs);
+}
