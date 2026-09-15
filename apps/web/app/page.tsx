@@ -275,7 +275,7 @@ export default function ChatPage() {
 
             <div className="border-t border-border bg-card px-4 py-4 shadow-[0_-4px_16px_rgb(15_23_42_/_0.04)] md:px-6">
               <form
-                className="mx-auto flex max-w-3xl items-end gap-3 rounded-lg border border-border bg-background p-3"
+                className="mx-auto flex max-w-3xl items-end gap-3 rounded-lg border border-border bg-background p-3 transition-[border-color,box-shadow] focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20"
                 onSubmit={(e) => {
                   e.preventDefault();
                   void send(question);
@@ -291,7 +291,7 @@ export default function ChatPage() {
                     onChange={(e) => setQuestion(e.target.value)}
                     disabled={loading}
                     placeholder="向知识库提问…"
-                    className="min-h-[64px] resize-none border-0 bg-transparent px-2 py-1 shadow-none focus-visible:ring-0"
+                    className="min-h-[64px] resize-none border-0 bg-transparent px-2 py-1 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                 </div>
                 <Button
