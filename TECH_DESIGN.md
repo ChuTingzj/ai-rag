@@ -90,43 +90,42 @@
                     ┌──────────── Web (Next.js 16.3.5) ────────────┐
                     │  Chat · KB Admin · Jobs · Eval · Audit         │
                     └───────────────┬───────────────────────────────┘
-                                    │ /api/* rewrite → FastAPI
+                                    │ /api/v1 rewrite → Nest Gateway
                     ┌───────────────▼─────────────────────┐
-                    │           API (FastAPI)              │
-                    │  Auth · KB · Docs · Query · Admin    │
-                    └─┬───────────┬───────────┬───────────┘
-                      │           │           │
-           ┌──────────▼──┐  ┌─────▼─────┐  ┌─▼──────────┐
-           │ Orchestrator│  │ Ingest API│  │ Eval API   │
-           └──────┬──────┘  └─────┬─────┘  └────────────┘
-                  │               │
-     ┌────────────┼───────────────┼────────────┐
-     │            │               │            │
-┌────▼────┐ ┌─────▼─────┐ ┌──────▼──────┐ ┌───▼────┐
-│Retriever│ │ Generator │ │ ACL Gateway │ │ Router │
-│Hybrid   │ │OpenRouter │ │ (noop→M2)   │ │(M2+)   │
-└────┬────┘ └───────────┘ └─────────────┘ └────────┘
-     │
-┌────▼──────────────────────────────┐
-│ PostgreSQL 16 + pgvector           │
-│ users, kb, docs, chunks            │
-│ embedding VECTOR + tsv FTS         │
-│ jobs, acl, audit, traces           │
-└───────────────────────────────────┘
+                    │     Gateway (NestJS :8080)           │
+                    │  CORS · JWT · routing · request-id   │
+                    └───┬─────────────┬─────────────┬─────┘
+                        │             │             │
+              ┌─────────▼──┐  ┌───────▼──────┐  ┌──▼──────────┐
+              │ Auth Nest  │  │ Connectors   │  │ RAG FastAPI │
+              │ register   │  │ Feishu bind  │  │ KB Docs     │
+              │ login /me  │  │ sync trigger │  │ Query Jobs  │
+              └─────┬──────┘  └──────┬───────┘  └──┬──────────┘
+                    │                │             │
+                    └────────┬───────┴─────────────┘
+                             │
+              ┌──────────────▼──────────────────────┐
+              │ PostgreSQL 16 + pgvector             │
+              │ users, kb, docs, chunks, connectors  │
+              └─────────────────────────────────────┘
 
 Worker (arq): parse → chunk → embed → UPSERT chunks(+vector,+tsv)
               feishu sync → ingest
-              (M4) graph build
 ```
 
 ### 4.1 运行时进程
 
 | 进程 | 职责 |
 | --- | --- |
-| `api` | 同步 HTTP：认证、CRUD、查询编排、读任务状态 |
+| `gateway` | 对外 HTTP 入口：CORS、JWT 校验、按路径转发、request-id |
+| `auth` | 注册 / 登录 / `GET /me`、签发 JWT、`users` 表 |
+| `connectors` | 飞书 connector 绑定与 sync 触发；enqueue 走 RAG internal API |
+| `api` | RAG HTTP：KB/Docs/Jobs/Query；`/internal/v1/enqueue/*` |
 | `worker` | 异步：解析、嵌入、PGVector 写入、Wiki 同步、重建 |
 | `web` | Next.js 16.3.5（standalone）；严格遵循 design-system |
 | `postgres`（pgvector） / `redis` | 基础设施 |
+
+Identity：Gateway 校验 Bearer JWT 后向下游转发 `X-User-Id` + `X-Internal-Token`；下游不直接信任客户端 JWT。
 
 ---
 
@@ -145,20 +144,22 @@ ai-rag/
 ├── pyproject.toml                 # uv workspace root
 ├── uv.lock
 ├── apps/
-│   ├── api/                       # FastAPI
+│   ├── gateway/                   # NestJS API gateway (:8080)
+│   ├── auth/                      # NestJS auth microservice (:8081)
+│   ├── connectors/                # NestJS connectors microservice (:8082)
+│   ├── api/                       # FastAPI RAG-only (:8000)
 │   │   └── app/
 │   │       ├── main.py
-│   │       ├── deps.py
-│   │       ├── api/               # routers
-│   │       ├── core/              # config, logging, security
-│   │       └── ...
+│   │       ├── api/               # KB, docs, jobs, query + internal enqueue
+│   │       ├── core/              # config, gateway principal deps
+│   │       └── workers/           # arq ingest/sync
 │   └── web/                       # Next.js 16.3.5（pnpm + App Router + design-system）
 │       ├── package.json           # "next": "16.3.5"
-│       ├── pnpm-lock.yaml
 │       ├── app/                   # App Router routes
 │       ├── components/
 │       └── styles/tokens.css
 ├── packages/
+│   ├── nest-common/               # JWT + internal-token helpers
 │   └── rag/                       # 可独立测试的领域库
 │       ├── providers/             # llm, embedding, rerank
 │       ├── connectors/            # upload, feishu, (notion, confluence stubs)

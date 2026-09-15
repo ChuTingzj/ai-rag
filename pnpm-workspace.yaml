@@ -1,0 +1,5 @@
+packages:
+  - "apps/gateway"
+  - "apps/auth"
+  - "apps/connectors"
+  - "packages/nest-common"

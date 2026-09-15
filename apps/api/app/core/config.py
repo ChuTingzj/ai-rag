@@ -6,7 +6,7 @@ class Settings(BaseSettings):
 
     openrouter_api_key: str = ""
     openrouter_model: str = "openai/gpt-4.1-mini"
-    database_url: str = "postgresql+asyncpg://rag:rag@localhost:5432/rag"
+    database_url: str = "postgresql+asyncpg://rag:rag@localhost:15432/rag"
     redis_url: str = "redis://localhost:16379"
     embedding_provider: str = "local_bge_m3"
     embedding_model: str = "BAAI/bge-m3"
@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     rerank_model: str = "BAAI/bge-reranker-v2-m3"
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     jwt_secret: str = ""
+    internal_service_token: str = ""
     data_dir: str = "./data"
 
 

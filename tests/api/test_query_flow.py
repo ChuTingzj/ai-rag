@@ -3,18 +3,24 @@ from __future__ import annotations
 import os
 import time
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.core import deps
 from app.core.config import settings
+from app.core.security import hash_password
+from app.db.models import User
 from app.main import app
 from domain.models import LLMResult, Message
 from ingest.pipeline import run_ingest
 from providers.registry import Settings as RagSettings
+
+_TEST_INTERNAL_TOKEN = "test-internal-service-token"
 
 
 def _async_database_url() -> str:
@@ -22,6 +28,13 @@ def _async_database_url() -> str:
         "DATABASE_URL",
         "postgresql+asyncpg://rag:rag@localhost:15432/rag",
     )
+
+
+def _sync_database_url() -> str:
+    url = _async_database_url()
+    if url.startswith("postgresql+asyncpg://"):
+        return url.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
+    return url
 
 
 @dataclass
@@ -64,6 +77,7 @@ def api_client(migrated_engine, tmp_path, monkeypatch: pytest.MonkeyPatch):
         "jwt_secret",
         "test-jwt-secret-for-api-e2e-32bytes-min",
     )
+    monkeypatch.setattr(settings, "internal_service_token", _TEST_INTERNAL_TOKEN)
     monkeypatch.setattr(settings, "embedding_provider", "hash_stub")
     monkeypatch.setattr(settings, "embedding_dim", 1024)
     monkeypatch.setattr(settings, "rerank_provider", "stub")
@@ -83,33 +97,34 @@ def api_client(migrated_engine, tmp_path, monkeypatch: pytest.MonkeyPatch):
     app.dependency_overrides.clear()
 
 
-def _auth_headers(token: str) -> dict[str, str]:
-    return {"Authorization": f"Bearer {token}"}
+def _gateway_headers(user_id: uuid.UUID) -> dict[str, str]:
+    return {
+        "X-User-Id": str(user_id),
+        "X-Internal-Token": _TEST_INTERNAL_TOKEN,
+    }
+
+
+def _register_user(email: str, password: str = "secure-pass-123") -> uuid.UUID:
+    engine = create_engine(_sync_database_url())
+    SessionLocal = sessionmaker(bind=engine, class_=Session, expire_on_commit=False)
+    with SessionLocal() as session:
+        user = User(
+            email=email,
+            password_hash=hash_password(password),
+            roles=["user"],
+        )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+        user_id = user.id
+    engine.dispose()
+    return user_id
 
 
 def test_register_kb_upload_wait_query(api_client: TestClient, tmp_path):
     email = f"user-{uuid.uuid4()}@example.com"
-    password = "secure-pass-123"
-
-    reg = api_client.post(
-        "/api/v1/auth/register",
-        json={"email": email, "password": password},
-    )
-    assert reg.status_code == 201, reg.text
-    user = reg.json()
-    assert user["email"] == email
-
-    login = api_client.post(
-        "/api/v1/auth/login",
-        json={"email": email, "password": password},
-    )
-    assert login.status_code == 200, login.text
-    token = login.json()["access_token"]
-    headers = _auth_headers(token)
-
-    me = api_client.get("/api/v1/me", headers=headers)
-    assert me.status_code == 200
-    assert me.json()["email"] == email
+    user_id = _register_user(email)
+    headers = _gateway_headers(user_id)
 
     kb = api_client.post(
         "/api/v1/knowledge-bases",
@@ -170,19 +185,8 @@ def test_register_kb_upload_wait_query(api_client: TestClient, tmp_path):
 def test_query_rejects_foreign_kb_id(api_client: TestClient):
     owner_email = f"owner-{uuid.uuid4()}@example.com"
     attacker_email = f"attacker-{uuid.uuid4()}@example.com"
-    password = "secure-pass-123"
 
-    owner_reg = api_client.post(
-        "/api/v1/auth/register",
-        json={"email": owner_email, "password": password},
-    )
-    assert owner_reg.status_code == 201, owner_reg.text
-    owner_token = api_client.post(
-        "/api/v1/auth/login",
-        json={"email": owner_email, "password": password},
-    ).json()["access_token"]
-    owner_headers = _auth_headers(owner_token)
-
+    owner_headers = _gateway_headers(_register_user(owner_email))
     kb = api_client.post(
         "/api/v1/knowledge-bases",
         headers=owner_headers,
@@ -191,17 +195,7 @@ def test_query_rejects_foreign_kb_id(api_client: TestClient):
     assert kb.status_code == 201, kb.text
     foreign_kb_id = kb.json()["id"]
 
-    attacker_reg = api_client.post(
-        "/api/v1/auth/register",
-        json={"email": attacker_email, "password": password},
-    )
-    assert attacker_reg.status_code == 201, attacker_reg.text
-    attacker_token = api_client.post(
-        "/api/v1/auth/login",
-        json={"email": attacker_email, "password": password},
-    ).json()["access_token"]
-    attacker_headers = _auth_headers(attacker_token)
-
+    attacker_headers = _gateway_headers(_register_user(attacker_email))
     denied = api_client.post(
         "/api/v1/query",
         headers=attacker_headers,
@@ -213,20 +207,8 @@ def test_query_rejects_foreign_kb_id(api_client: TestClient):
 def test_query_empty_kb_ids_scopes_to_owned_only(api_client: TestClient, tmp_path):
     owner_email = f"owner-{uuid.uuid4()}@example.com"
     other_email = f"other-{uuid.uuid4()}@example.com"
-    password = "secure-pass-123"
 
-    owner_token = api_client.post(
-        "/api/v1/auth/register",
-        json={"email": owner_email, "password": password},
-    )
-    assert owner_token.status_code == 201, owner_token.text
-    owner_headers = _auth_headers(
-        api_client.post(
-            "/api/v1/auth/login",
-            json={"email": owner_email, "password": password},
-        ).json()["access_token"]
-    )
-
+    owner_headers = _gateway_headers(_register_user(owner_email))
     kb = api_client.post(
         "/api/v1/knowledge-bases",
         headers=owner_headers,
@@ -266,18 +248,7 @@ def test_query_empty_kb_ids_scopes_to_owned_only(api_client: TestClient, tmp_pat
     assert owned_empty.status_code == 200, owned_empty.text
     assert "3000" in owned_empty.json()["answer"] or owned_empty.json()["citations"]
 
-    other_reg = api_client.post(
-        "/api/v1/auth/register",
-        json={"email": other_email, "password": password},
-    )
-    assert other_reg.status_code == 201, other_reg.text
-    other_headers = _auth_headers(
-        api_client.post(
-            "/api/v1/auth/login",
-            json={"email": other_email, "password": password},
-        ).json()["access_token"]
-    )
-
+    other_headers = _gateway_headers(_register_user(other_email))
     no_kb = api_client.post(
         "/api/v1/query",
         headers=other_headers,

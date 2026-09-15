@@ -27,6 +27,35 @@ services:
       timeout: 3s
       retries: 5
 
+  api:
+    image: python:3.12-slim
+    working_dir: /app
+    command:
+      [
+        "sh",
+        "-c",
+        "pip install -q uv && uv sync && uv run uvicorn apps.api.app.main:app --host 0.0.0.0 --port 8000",
+      ]
+    volumes:
+      - .:/app
+      - ./data:/data
+    environment:
+      DATABASE_URL: postgresql+asyncpg://rag:rag@postgres:5432/rag
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-me}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-dev-internal-token-change-me}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-local_bge_m3}
+      EMBEDDING_DIM: ${EMBEDDING_DIM:-1024}
+      DATA_DIR: /data
+      PYTHONPATH: /app/apps/api:/app/packages/rag
+    expose:
+      - "8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   worker:
     image: python:3.12-slim
     working_dir: /app
@@ -35,8 +64,10 @@ services:
       - .:/app
       - ./data:/data
     environment:
-      DATABASE_URL: postgresql+asyncpg://rag:rag@postgres:15432/rag
+      DATABASE_URL: postgresql+asyncpg://rag:rag@postgres:5432/rag
       REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-me}
+      CONNECTOR_ENCRYPTION_SECRET: ${CONNECTOR_ENCRYPTION_SECRET:-${JWT_SECRET:-dev-jwt-secret-change-me}}
       EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-local_bge_m3}
       EMBEDDING_DIM: ${EMBEDDING_DIM:-1024}
       DATA_DIR: /data
@@ -46,6 +77,79 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+  auth:
+    image: node:22-bookworm-slim
+    working_dir: /app
+    command:
+      [
+        "sh",
+        "-c",
+        "corepack enable && pnpm install --frozen-lockfile && pnpm --filter @ai-rag/nest-common build && pnpm --filter @ai-rag/auth prisma:generate && pnpm --filter @ai-rag/auth build && pnpm --filter @ai-rag/auth start:prod",
+      ]
+    volumes:
+      - .:/app
+    environment:
+      PORT: "8081"
+      DATABASE_URL: postgresql://rag:rag@postgres:5432/rag
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-me}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-dev-internal-token-change-me}
+    expose:
+      - "8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  connectors:
+    image: node:22-bookworm-slim
+    working_dir: /app
+    command:
+      [
+        "sh",
+        "-c",
+        "corepack enable && pnpm install --frozen-lockfile && pnpm --filter @ai-rag/nest-common build && pnpm --filter @ai-rag/connectors prisma:generate && pnpm --filter @ai-rag/connectors build && pnpm --filter @ai-rag/connectors start:prod",
+      ]
+    volumes:
+      - .:/app
+    environment:
+      PORT: "8082"
+      DATABASE_URL: postgresql://rag:rag@postgres:5432/rag
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-me}
+      CONNECTOR_ENCRYPTION_SECRET: ${CONNECTOR_ENCRYPTION_SECRET:-${JWT_SECRET:-dev-jwt-secret-change-me}}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-dev-internal-token-change-me}
+      RAG_API_URL: http://api:8000
+    expose:
+      - "8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_started
+
+  gateway:
+    image: node:22-bookworm-slim
+    working_dir: /app
+    command:
+      [
+        "sh",
+        "-c",
+        "corepack enable && pnpm install --frozen-lockfile && pnpm --filter @ai-rag/nest-common build && pnpm --filter @ai-rag/gateway build && pnpm --filter @ai-rag/gateway start:prod",
+      ]
+    volumes:
+      - .:/app
+    environment:
+      PORT: "8080"
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-me}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-dev-internal-token-change-me}
+      AUTH_SERVICE_URL: http://auth:8081
+      CONNECTORS_SERVICE_URL: http://connectors:8082
+      RAG_API_URL: http://api:8000
+    ports:
+      - "8080:8080"
+    depends_on:
+      - auth
+      - connectors
+      - api
 
 volumes:
   postgres_data:

@@ -26,21 +26,23 @@ uv run alembic upgrade head
 echo "==> Indexing M1 eval corpus"
 uv run python -m rag.eval.run --pipeline hybrid --compare --out reports/smoke-m1.json
 
-echo "==> Health check (API must be running separately on :8000)"
-if curl -sf "http://localhost:8000/health" >/dev/null; then
-  echo "API health OK"
+echo "==> Health check (gateway preferred on :8080; RAG API on :8000)"
+if curl -sf "http://localhost:8080/health" >/dev/null; then
+  echo "Gateway health OK"
   if [[ -n "${SMOKE_JWT:-}" ]]; then
-    curl -sf -X POST "http://localhost:8000/api/v1/query" \
+    curl -sf -X POST "http://localhost:8080/api/v1/query" \
       -H "Authorization: Bearer ${SMOKE_JWT}" \
       -H "Content-Type: application/json" \
       -d '{"question":"What is TOKEN_EXPENSE_3000?","kb_ids":[]}' \
       | head -c 200 || true
     echo
   else
-    echo "Set SMOKE_JWT to exercise /api/v1/query"
+    echo "Set SMOKE_JWT to exercise /api/v1/query via gateway"
   fi
+elif curl -sf "http://localhost:8000/health" >/dev/null; then
+  echo "RAG API health OK (direct; prefer gateway in normal setups)"
 else
-  echo "Skip query smoke (start API: uv run uvicorn apps.api.app.main:app --port 8000)"
+  echo "Skip query smoke (start gateway + services, or: uv run uvicorn apps.api.app.main:app --port 8000)"
 fi
 
 echo "==> Smoke complete"

@@ -10,10 +10,13 @@ sys.path.insert(0, str(repo_root / "apps" / "api"))
 sys.path.insert(0, str(repo_root / "packages" / "rag"))
 
 from alembic import context
+from dotenv import load_dotenv
 from sqlalchemy import engine_from_config, pool
 
 from app.db.base import Base
 from app.db import models  # noqa: F401
+
+load_dotenv(repo_root / ".env")
 
 config = context.config
 

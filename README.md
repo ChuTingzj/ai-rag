@@ -1,12 +1,12 @@
 # AI RAG — M1 Hybrid RAG Platform
 
-Enterprise knowledge assistant: FastAPI backend, PostgreSQL (pgvector), Redis, and a Next.js UI (added in later milestones). See [TECH_DESIGN.md](./TECH_DESIGN.md) and [PRD.md](./PRD.md).
+Enterprise knowledge assistant: NestJS gateway + Auth/Connectors microservices, FastAPI RAG API, PostgreSQL (pgvector), Redis, and Next.js UI. See [TECH_DESIGN.md](./TECH_DESIGN.md) and [PRD.md](./PRD.md).
 
 ## Prerequisites
 
 - [uv](https://docs.astral.sh/uv/) (Python 3.12+)
 - [Docker](https://www.docker.com/) (Compose v2)
-- [pnpm](https://pnpm.io/) (for the web app in Task 9+)
+- [pnpm](https://pnpm.io/) 9.x (Nest gateway/services + web)
 
 ## Quick start
 
@@ -14,46 +14,66 @@ Enterprise knowledge assistant: FastAPI backend, PostgreSQL (pgvector), Redis, a
 
 ```bash
 cp .env.example .env
-# Edit .env with secrets (OPENROUTER_API_KEY, JWT_SECRET, etc.)
+# Edit .env with secrets (OPENROUTER_API_KEY, JWT_SECRET, INTERNAL_SERVICE_TOKEN, etc.)
+./scripts/link-env.sh   # apps/*/.env → ../../.env (idempotent)
 
 docker compose up -d postgres redis
 ```
 
 ### 2. Python (uv workspace)
 
-Install dependencies and run tests:
-
 ```bash
 uv sync --all-groups
+uv run alembic upgrade head
 uv run pytest tests/ -v
 ```
 
-Start the API:
+Start the RAG API (behind the gateway in production):
 
 ```bash
+export INTERNAL_SERVICE_TOKEN=dev-internal-token-change-me
 uv run uvicorn apps.api.app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Health check: `GET http://localhost:8000/health` → `{"status":"ok"}`.
+### 3. NestJS gateway + microservices (managed with nest-cli)
 
-### 3. Frontend (later tasks)
-
-From `apps/web` (once scaffolded):
+From the repo root (pnpm workspace: `apps/gateway`, `apps/auth`, `apps/connectors`, `packages/nest-common`):
 
 ```bash
 pnpm install
-pnpm dev
+pnpm --filter @ai-rag/nest-common build
+# Prisma reads DATABASE_URL_NEST from the package .env symlink
+pnpm --filter @ai-rag/auth prisma:generate
+pnpm --filter @ai-rag/connectors prisma:generate
 ```
+
+Dev (each uses `nest start --watch`; env from root `.env` via symlink):
+
+```bash
+pnpm --filter @ai-rag/auth start:dev
+pnpm --filter @ai-rag/connectors start:dev
+pnpm --filter @ai-rag/gateway start:dev
+```
+
+Public entry: `http://localhost:8080` (`GET /health`, `/api/v1/*`).
+
+### 4. Frontend
+
+```bash
+cd apps/web && pnpm install && pnpm dev
+```
+
+Next rewrites `/api/v1/*` to the gateway (`API_PROXY_TARGET`, default `http://127.0.0.1:8080`).
 
 ## Repository layout
 
-- `apps/api` — FastAPI application
-- `packages/rag` — domain library (ingest, retrieve, generate)
-- `evals/m1/` — golden questions + synthetic corpus for M1 eval
-- `tests/` — integration and unit tests
-- `docker-compose.yml` — Postgres (pgvector) + Redis
-
-Python packages are managed **only** with `uv` (`uv sync`, `uv add`, `uv run`). Commit `uv.lock`.
+- `apps/gateway` — NestJS API gateway (CORS, JWT, reverse proxy)
+- `apps/auth` — NestJS auth microservice (register/login/me)
+- `apps/connectors` — NestJS connectors microservice (Feishu bind/sync)
+- `apps/api` — FastAPI RAG API (KB/docs/jobs/query + internal enqueue)
+- `apps/web` — Next.js UI
+- `packages/rag` — Python domain library
+- `packages/nest-common` — shared Nest JWT/header helpers
 
 ## M1 acceptance checklist
 
@@ -61,5 +81,5 @@ Python packages are managed **only** with `uv` (`uv sync`, `uv add`, `uv run`). 
 - [ ] `uv run pytest tests/ -v` passes (Postgres on `localhost:15432`)
 - [ ] `uv run python -m rag.eval.run --pipeline hybrid --compare --out reports/m1.json` — metrics include `retrieval_hit_rate` and `citation_precision`; hybrid hit rate should meet or beat naive (warning only if not)
 - [ ] `./scripts/smoke_m1.sh` indexes `evals/m1/corpus` and writes `reports/smoke-m1.json`
-- [ ] `GET /health` returns `{"status":"ok"}`; optional authenticated `POST /api/v1/query` with `SMOKE_JWT`
+- [ ] Gateway `GET /health` returns ok/degraded with upstreams; optional authenticated `POST /api/v1/query` via gateway with `SMOKE_JWT`
 - [ ] Ingest + hybrid retrieval + cited answers via API (see `tests/api/test_query_flow.py`)

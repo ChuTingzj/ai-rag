@@ -7,13 +7,11 @@ from typing import Annotated, Protocol
 
 from arq import create_pool
 from arq.connections import RedisSettings
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from fastapi import Depends, Header, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from acl.gateway import AclGateway
 from app.core.config import settings
-from app.core.security import decode_access_token
 from app.db.models import User
 from app.db.session import async_session_factory
 from domain.protocols import LLMProvider
@@ -23,8 +21,6 @@ from providers.registry import Settings as RagSettings
 from providers.registry import get_embedding, get_llm as build_llm, get_reranker
 from retrieve.hybrid import HybridRetriever
 from retrieve.packer import ContextPacker
-
-_bearer = HTTPBearer(auto_error=False)
 
 
 class IngestQueue(Protocol):
@@ -76,18 +72,35 @@ def get_llm(rag_settings: Annotated[RagSettings, Depends(get_rag_settings)]) -> 
     return build_llm(rag_settings)
 
 
-async def get_current_user(
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
-    session: Annotated[AsyncSession, Depends(get_async_session)],
-) -> User:
-    if credentials is None or credentials.scheme.lower() != "bearer":
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
-    try:
-        user_id = decode_access_token(credentials.credentials)
-    except Exception as exc:
+def require_internal_token(
+    x_internal_token: Annotated[str | None, Header()] = None,
+) -> None:
+    expected = settings.internal_service_token
+    if not expected:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="INTERNAL_SERVICE_TOKEN is not configured",
+        )
+    if not x_internal_token or x_internal_token != expected:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
+            detail="Invalid internal token",
+        )
+
+
+async def get_current_user(
+    session: Annotated[AsyncSession, Depends(get_async_session)],
+    _: Annotated[None, Depends(require_internal_token)],
+    x_user_id: Annotated[str | None, Header()] = None,
+) -> User:
+    if not x_user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    try:
+        user_id = uuid.UUID(x_user_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid user id",
         ) from exc
 
     user = await session.get(User, user_id)
@@ -153,4 +166,3 @@ def get_orchestrator(
         packer=ContextPacker(),
         generator=Generator(llm, model=rag_settings.openrouter_model),
     )
-
