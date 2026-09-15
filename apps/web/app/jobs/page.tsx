@@ -40,22 +40,22 @@ export default function JobsPage() {
   return (
     <AuthGate>
       <AppShell>
-        <div className="flex-1 space-y-6 p-6">
+        <div className="flex-1 space-y-6 p-6 md:p-8">
           <header className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-md bg-primary/12 text-primary">
+            <div className="flex size-11 items-center justify-center rounded-lg bg-secondary text-primary">
               <ListChecks className="size-5" aria-hidden="true" />
             </div>
             <div>
-              <h1 className="text-xl font-bold">任务</h1>
+              <h1 className="text-xl font-extrabold tracking-tight">任务</h1>
               <p className="text-sm text-muted-foreground">
                 索引与同步进度在各知识库详情的「任务」标签中查看
               </p>
             </div>
           </header>
 
-          <Card>
+          <Card className="shadow-[0_1px_2px_rgb(15_23_42_/_0.06)]">
             <CardHeader>
-              <CardTitle className="text-base">从知识库进入任务</CardTitle>
+              <CardTitle className="text-base font-extrabold">从知识库进入任务</CardTitle>
               <CardDescription>
                 当前接口按知识库聚合任务；选择下方知识库可查看上传索引与飞书同步状态。
               </CardDescription>

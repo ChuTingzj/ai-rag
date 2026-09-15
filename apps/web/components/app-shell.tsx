@@ -38,13 +38,19 @@ export function AppShell({ children }: AppShellProps) {
     <div className="flex min-h-screen bg-background font-sans text-foreground">
       <nav
         aria-label="主导航"
-        className="flex w-14 shrink-0 flex-col gap-6 border-r border-sidebar-border bg-sidebar px-2 py-4 md:w-56 md:px-3 md:py-6"
+        className="flex w-14 shrink-0 flex-col gap-6 border-r border-sidebar-border bg-sidebar px-2 py-4 text-sidebar-foreground md:w-56 md:px-3 md:py-6"
       >
         <div className="px-2">
-          <p className="hidden text-[1.05rem] font-extrabold tracking-tight text-sidebar-foreground md:block">
+          <p className="hidden text-[1.05rem] font-extrabold tracking-tight text-white md:block">
             企业知识助手
           </p>
-          <p className="text-center text-xs font-extrabold text-primary md:hidden" aria-hidden>
+          <p className="mt-1 hidden text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground md:block">
+            Knowledge RAG
+          </p>
+          <p
+            className="text-center text-xs font-extrabold text-sidebar-primary md:hidden"
+            aria-hidden
+          >
             知
           </p>
         </div>
@@ -60,9 +66,9 @@ export function AppShell({ children }: AppShellProps) {
                 <Link
                   href={href}
                   className={cn(
-                    "flex items-center gap-2 rounded-md px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:px-3",
+                    "flex items-center gap-2 rounded-lg px-2.5 py-2.5 text-sm font-medium text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:px-3",
                     active &&
-                      "bg-primary/12 font-semibold text-primary hover:bg-primary/12 hover:text-primary",
+                      "bg-sidebar-primary font-semibold text-sidebar-primary-foreground shadow-sm hover:bg-sidebar-primary hover:text-sidebar-primary-foreground",
                   )}
                 >
                   <Icon className="size-5 shrink-0" aria-hidden="true" />
@@ -74,11 +80,11 @@ export function AppShell({ children }: AppShellProps) {
         </ul>
 
         <div className="mt-auto space-y-3">
-          <Separator />
+          <Separator className="bg-sidebar-border" />
           <Button
             type="button"
             variant="ghost"
-            className="w-full justify-start gap-2 px-2.5 text-muted-foreground md:px-3"
+            className="w-full justify-start gap-2 px-2.5 text-sidebar-foreground/65 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground md:px-3"
             onClick={signOut}
           >
             <LogOut className="size-5 shrink-0" aria-hidden="true" />

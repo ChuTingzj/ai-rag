@@ -40,9 +40,13 @@ export default function KnowledgeBasesPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const list = await apiFetch<KnowledgeBaseOut[]>("/knowledge-bases");
       setKbs(list);
+    } catch {
+      setKbs([]);
+      setError("加载知识库失败，请确认 RAG API（:8000）与网关已启动");
     } finally {
       setLoading(false);
     }
@@ -79,53 +83,74 @@ export default function KnowledgeBasesPage() {
   return (
     <AuthGate>
       <AppShell>
-        <div className="flex-1 p-6">
+        <div className="flex-1 p-6 md:p-8">
           <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
-            <h1 className="text-xl font-bold">知识库</h1>
-            <Button type="button" onClick={() => setModalOpen(true)}>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                管理
+              </p>
+              <h1 className="text-xl font-extrabold tracking-tight">知识库</h1>
+            </div>
+            <Button
+              type="button"
+              onClick={() => {
+                setError(null);
+                setModalOpen(true);
+              }}
+            >
               <Plus className="size-[18px]" aria-hidden="true" />
               新建知识库
             </Button>
           </header>
 
+          {!loading && error && !modalOpen ? (
+            <div className="mb-4 rounded-md bg-destructive/12 px-3 py-2 text-sm text-destructive">
+              {error}
+            </div>
+          ) : null}
+
           {loading ? (
-            <Skeleton className="h-[120px] w-full" aria-busy="true" />
+            <Skeleton className="h-[120px] w-full rounded-lg" aria-busy="true" />
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>名称</TableHead>
-                  <TableHead>描述</TableHead>
-                  <TableHead>创建时间</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {kbs.length === 0 ? (
+            <div className="overflow-hidden rounded-lg border border-border bg-card shadow-[0_1px_2px_rgb(15_23_42_/_0.06)]">
+              <Table>
+                <TableHeader className="bg-muted/60">
                   <TableRow>
-                    <TableCell colSpan={3} className="text-muted-foreground">
-                      暂无知识库，点击「新建知识库」开始
-                    </TableCell>
+                    <TableHead>名称</TableHead>
+                    <TableHead>描述</TableHead>
+                    <TableHead>创建时间</TableHead>
                   </TableRow>
-                ) : (
-                  kbs.map((kb) => (
-                    <TableRow key={kb.id}>
-                      <TableCell>
-                        <Link
-                          href={`/kbs/${kb.id}`}
-                          className="font-semibold text-primary hover:underline"
-                        >
-                          {kb.name}
-                        </Link>
-                      </TableCell>
-                      <TableCell>{kb.description ?? "—"}</TableCell>
-                      <TableCell>
-                        {new Date(kb.created_at).toLocaleString()}
+                </TableHeader>
+                <TableBody>
+                  {kbs.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-muted-foreground">
+                        {error
+                          ? "无法加载知识库列表"
+                          : "暂无知识库，点击「新建知识库」开始"}
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    kbs.map((kb) => (
+                      <TableRow key={kb.id}>
+                        <TableCell>
+                          <Link
+                            href={`/kbs/${kb.id}`}
+                            className="font-semibold text-primary hover:underline"
+                          >
+                            {kb.name}
+                          </Link>
+                        </TableCell>
+                        <TableCell>{kb.description ?? "—"}</TableCell>
+                        <TableCell>
+                          {new Date(kb.created_at).toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           )}
 
           <Dialog open={modalOpen} onOpenChange={setModalOpen}>

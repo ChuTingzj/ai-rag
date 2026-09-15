@@ -1,6 +1,208 @@
 {
-  "note": "Superdesign cloud login failed (TLS). Local design direction used; see design-direction.md.",
-  "selectedDirection": "variation-a-layout-polish-teal",
-  "implementation": "shadcn-manual-scaffold",
-  "targets": ["/", "/login", "/kbs", "/kbs/[id]", "/jobs"]
+  "schemaVersion": 1,
+  "targets": {
+    "/": {
+      "targetKind": "existing-ui",
+      "projectId": "30fcf80a-86f9-4f34-b8e3-a2d814cd75c8",
+      "baselineDraftId": "7d2438e4-c727-4e84-ae96-01ff64bd92d8",
+      "activeDraftId": "803a051a-a6e7-4509-b788-5ed9a57aefd6",
+      "designSystemPath": ".superdesign/design-system.md",
+      "referenceIds": [],
+      "contextFiles": [
+        ".superdesign/design-system.md",
+        "apps/web/app/page.tsx",
+        "apps/web/components/app-shell.tsx",
+        "apps/web/app/globals.css",
+        "apps/web/lib/utils.ts",
+        "apps/web/components/ui/button.tsx",
+        "apps/web/components/ui/badge.tsx",
+        "apps/web/components/ui/label.tsx",
+        "apps/web/components/ui/scroll-area.tsx",
+        "apps/web/components/ui/select.tsx",
+        "apps/web/components/ui/sheet.tsx",
+        "apps/web/components/ui/skeleton.tsx",
+        "apps/web/components/ui/textarea.tsx",
+        "apps/web/components/ui/separator.tsx"
+      ],
+      "fingerprints": {
+        ".superdesign/design-system.md": "da44f55689eedcbc29dffad237e8e3d58b629432e1a546dd503cc671ba9f6e09",
+        "apps/web/app/page.tsx": "9158e09204f71ba15404f8152616a3ad98b5be7987d00f4ee77a92c273c14766",
+        "apps/web/components/app-shell.tsx": "e8309434961df1dfd9d96e3dadf54ab65d4752c6e22de7ae5af3c7319a126d79",
+        "apps/web/app/globals.css": "d0963ee8c9103e962dfa3f9ebe55866c6f2cbb2461902decbdb56fff7539f563",
+        "apps/web/lib/utils.ts": "d1f1e0d62cb8d8d1e04c26e14de842d8a151f75812d81b046c65b5d1fe8e4b27",
+        "apps/web/components/ui/button.tsx": "9b8efa8a5ba3aa6f85dda6bbc93df249a452c28e9abc1d426734a4f1b910f07c",
+        "apps/web/components/ui/badge.tsx": "39ff4edaa6c233c2c0039d38844151c82a8beed3e9dfad297aae851e92950560",
+        "apps/web/components/ui/label.tsx": "a9f2cbe6d24f85bfe77dbf4a8d8696347ee3bc07f4014eff7e07962f451fe537",
+        "apps/web/components/ui/scroll-area.tsx": "074f1c1643315b3b237a0f477379fc0c8313f44948cfddc02a4e870c2f03d674",
+        "apps/web/components/ui/select.tsx": "dc9b0144340ae3bdcb631e53ab02a557d462b943a18f30ad6e6a73c6e0f8505f",
+        "apps/web/components/ui/sheet.tsx": "111b4955c6f82c884c3649ea221fe714267279d311bae0d49003b9ff4d7fffb9",
+        "apps/web/components/ui/skeleton.tsx": "63d1264ac4258f0607c66d0155f9e09c93125f2a73100a02073dcab319a99dc2",
+        "apps/web/components/ui/textarea.tsx": "c3e5cc7486d4b8b661dc1c57ad0c66f035cb9c1e7633d514dfbfbf17abdd4981",
+        "apps/web/components/ui/separator.tsx": "53d22222cfb6d9e861696b0f02921704c05bc2ad7b745b4dab35d326de3e4a73"
+      },
+      "components": [
+        {
+          "name": "AppShell",
+          "id": "12f7cf7e-96a4-4da4-af39-6de8f549e0ef",
+          "sourcePath": "apps/web/components/app-shell.tsx"
+        }
+      ],
+      "drafts": {
+        "7d2438e4-c727-4e84-ae96-01ff64bd92d8": {
+          "title": "Current Chat /",
+          "visualDirection": "legacy teal baseline reproduction",
+          "currentVersion": 1
+        },
+        "803a051a-a6e7-4509-b788-5ed9a57aefd6": {
+          "title": "Chat Cobalt Rail",
+          "visualDirection": "slate+cobalt dark sidebar, Manrope, elevated composer",
+          "parentDraftId": "7d2438e4-c727-4e84-ae96-01ff64bd92d8",
+          "currentVersion": 1
+        },
+        "9956e81d-2c2e-4a06-95be-fb5bd8421925": {
+          "title": "Chat Editorial Split",
+          "visualDirection": "icon rail + editorial header + evidence panel",
+          "parentDraftId": "7d2438e4-c727-4e84-ae96-01ff64bd92d8",
+          "currentVersion": 1
+        }
+      },
+      "updatedAt": "2026-09-15T07:56:00.000Z"
+    },
+    "/login": {
+      "targetKind": "existing-ui",
+      "projectId": "30fcf80a-86f9-4f34-b8e3-a2d814cd75c8",
+      "activeDraftId": "989db3c8-f153-42f8-91d6-fcdaced3eeae",
+      "sourceTarget": "/",
+      "sourceDraftId": "803a051a-a6e7-4509-b788-5ed9a57aefd6",
+      "designSystemPath": ".superdesign/design-system.md",
+      "referenceIds": [],
+      "contextFiles": [
+        ".superdesign/design-system.md",
+        "apps/web/app/login/page.tsx",
+        "apps/web/app/globals.css"
+      ],
+      "fingerprints": {
+        ".superdesign/design-system.md": "da44f55689eedcbc29dffad237e8e3d58b629432e1a546dd503cc671ba9f6e09",
+        "apps/web/app/login/page.tsx": "2930932be6b351479082cd6c69510d29ee33525fdde2681df0cb821967e30641",
+        "apps/web/app/globals.css": "d0963ee8c9103e962dfa3f9ebe55866c6f2cbb2461902decbdb56fff7539f563"
+      },
+      "components": [],
+      "drafts": {
+        "989db3c8-f153-42f8-91d6-fcdaced3eeae": {
+          "title": "Login Cobalt",
+          "visualDirection": "centered card on slate field, cobalt CTA",
+          "currentVersion": 1
+        }
+      },
+      "updatedAt": "2026-09-15T07:56:00.000Z"
+    },
+    "/kbs": {
+      "targetKind": "existing-ui",
+      "projectId": "30fcf80a-86f9-4f34-b8e3-a2d814cd75c8",
+      "activeDraftId": "e58b5d88-2cd9-4739-88bf-f22e2b0fa6db",
+      "sourceTarget": "/",
+      "sourceDraftId": "803a051a-a6e7-4509-b788-5ed9a57aefd6",
+      "designSystemPath": ".superdesign/design-system.md",
+      "referenceIds": [],
+      "contextFiles": [
+        ".superdesign/design-system.md",
+        "apps/web/app/kbs/page.tsx",
+        "apps/web/components/app-shell.tsx",
+        "apps/web/app/globals.css"
+      ],
+      "fingerprints": {
+        ".superdesign/design-system.md": "da44f55689eedcbc29dffad237e8e3d58b629432e1a546dd503cc671ba9f6e09",
+        "apps/web/app/kbs/page.tsx": "c137a88b14cf53d61a18031a00443a54840d497a6831a786f2f243147db163e6",
+        "apps/web/components/app-shell.tsx": "e8309434961df1dfd9d96e3dadf54ab65d4752c6e22de7ae5af3c7319a126d79",
+        "apps/web/app/globals.css": "d0963ee8c9103e962dfa3f9ebe55866c6f2cbb2461902decbdb56fff7539f563"
+      },
+      "components": [
+        {
+          "name": "AppShell",
+          "id": "12f7cf7e-96a4-4da4-af39-6de8f549e0ef",
+          "sourcePath": "apps/web/components/app-shell.tsx"
+        }
+      ],
+      "drafts": {
+        "e58b5d88-2cd9-4739-88bf-f22e2b0fa6db": {
+          "title": "KBs Cobalt",
+          "visualDirection": "table + create dialog, dark rail",
+          "currentVersion": 1
+        }
+      },
+      "updatedAt": "2026-09-15T07:56:00.000Z"
+    },
+    "/kbs/[id]": {
+      "targetKind": "existing-ui",
+      "projectId": "30fcf80a-86f9-4f34-b8e3-a2d814cd75c8",
+      "activeDraftId": "dc29b6fb-82ca-4592-a45e-304059d5cc1a",
+      "sourceTarget": "/",
+      "sourceDraftId": "803a051a-a6e7-4509-b788-5ed9a57aefd6",
+      "designSystemPath": ".superdesign/design-system.md",
+      "referenceIds": [],
+      "contextFiles": [
+        ".superdesign/design-system.md",
+        "apps/web/app/kbs/[id]/page.tsx",
+        "apps/web/components/app-shell.tsx",
+        "apps/web/app/globals.css"
+      ],
+      "fingerprints": {
+        ".superdesign/design-system.md": "da44f55689eedcbc29dffad237e8e3d58b629432e1a546dd503cc671ba9f6e09",
+        "apps/web/app/kbs/[id]/page.tsx": "ba616e90bf364b850bddef78bd5fee7622a6682fb9166296684354b2ed480e9b",
+        "apps/web/components/app-shell.tsx": "e8309434961df1dfd9d96e3dadf54ab65d4752c6e22de7ae5af3c7319a126d79",
+        "apps/web/app/globals.css": "d0963ee8c9103e962dfa3f9ebe55866c6f2cbb2461902decbdb56fff7539f563"
+      },
+      "components": [
+        {
+          "name": "AppShell",
+          "id": "12f7cf7e-96a4-4da4-af39-6de8f549e0ef",
+          "sourcePath": "apps/web/components/app-shell.tsx"
+        }
+      ],
+      "drafts": {
+        "dc29b6fb-82ca-4592-a45e-304059d5cc1a": {
+          "title": "KB Detail Cobalt",
+          "visualDirection": "tabs + upload zone + status badges",
+          "currentVersion": 1
+        }
+      },
+      "updatedAt": "2026-09-15T07:56:00.000Z"
+    },
+    "/jobs": {
+      "targetKind": "existing-ui",
+      "projectId": "30fcf80a-86f9-4f34-b8e3-a2d814cd75c8",
+      "activeDraftId": "2c7a382a-89d0-4416-9d1c-de6f4e6104c2",
+      "sourceTarget": "/",
+      "sourceDraftId": "803a051a-a6e7-4509-b788-5ed9a57aefd6",
+      "designSystemPath": ".superdesign/design-system.md",
+      "referenceIds": [],
+      "contextFiles": [
+        ".superdesign/design-system.md",
+        "apps/web/app/jobs/page.tsx",
+        "apps/web/components/app-shell.tsx",
+        "apps/web/app/globals.css"
+      ],
+      "fingerprints": {
+        ".superdesign/design-system.md": "da44f55689eedcbc29dffad237e8e3d58b629432e1a546dd503cc671ba9f6e09",
+        "apps/web/app/jobs/page.tsx": "e5cd74f46ee3f762bd5cb9c626f3e4a4e841b356188e18887c8246e320577cab",
+        "apps/web/components/app-shell.tsx": "e8309434961df1dfd9d96e3dadf54ab65d4752c6e22de7ae5af3c7319a126d79",
+        "apps/web/app/globals.css": "d0963ee8c9103e962dfa3f9ebe55866c6f2cbb2461902decbdb56fff7539f563"
+      },
+      "components": [
+        {
+          "name": "AppShell",
+          "id": "12f7cf7e-96a4-4da4-af39-6de8f549e0ef",
+          "sourcePath": "apps/web/components/app-shell.tsx"
+        }
+      ],
+      "drafts": {
+        "2c7a382a-89d0-4416-9d1c-de6f4e6104c2": {
+          "title": "Jobs Cobalt",
+          "visualDirection": "KB gateway list with status chips",
+          "currentVersion": 1
+        }
+      },
+      "updatedAt": "2026-09-15T07:56:00.000Z"
+    }
+  }
 }

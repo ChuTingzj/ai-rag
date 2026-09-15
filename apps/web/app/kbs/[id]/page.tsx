@@ -136,15 +136,17 @@ export default function KnowledgeBaseDetailPage() {
   return (
     <AuthGate>
       <AppShell>
-        <div className="flex-1 p-6">
-          <header className="mb-4 flex flex-wrap items-start justify-between gap-4">
+        <div className="flex-1 p-6 md:p-8">
+          <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h1 className="text-xl font-bold">{kb?.name ?? "知识库"}</h1>
-              <p className="m-0 text-sm text-muted-foreground">
+              <h1 className="text-xl font-extrabold tracking-tight">
+                {kb?.name ?? "知识库"}
+              </h1>
+              <p className="m-0 mt-1 text-sm text-muted-foreground">
                 {kb?.description ?? ""}
               </p>
             </div>
-            <Button type="button" variant="secondary" onClick={() => void triggerSync()}>
+            <Button type="button" variant="outline" onClick={() => void triggerSync()}>
               <RefreshCw className="size-[18px]" aria-hidden="true" />
               同步飞书
             </Button>
@@ -164,7 +166,7 @@ export default function KnowledgeBaseDetailPage() {
             <TabsContent value="documents" className="space-y-6">
               <button
                 type="button"
-                className="w-full cursor-pointer rounded-md border-2 border-dashed border-border px-8 py-10 text-center transition-colors hover:bg-primary/[0.06]"
+                className="w-full cursor-pointer rounded-lg border-2 border-dashed border-border bg-card px-8 py-10 text-center transition-colors hover:border-primary/50 hover:bg-secondary/40"
                 onClick={() => fileInputRef.current?.click()}
                 aria-busy={uploading}
               >

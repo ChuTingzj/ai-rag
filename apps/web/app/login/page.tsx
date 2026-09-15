@@ -80,17 +80,23 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="grid min-h-screen place-items-center bg-background p-6">
-      <Card className="w-full max-w-[400px] animate-in fade-in slide-in-from-bottom-1 duration-300">
+    <div className="relative grid min-h-screen place-items-center overflow-hidden bg-background p-6">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_#EEF2FF_0%,_transparent_55%)]" />
+      <div className="pointer-events-none absolute -left-24 top-24 size-72 rounded-full bg-primary/10 blur-3xl" />
+      <Card className="relative w-full max-w-[400px] shadow-[0_1px_2px_rgb(15_23_42_/_0.06)] animate-in fade-in slide-in-from-bottom-1 duration-300">
         <CardHeader className="items-center text-center">
-          <ShieldCheck className="size-8 text-primary" aria-hidden="true" />
-          <CardTitle className="text-2xl font-extrabold">企业知识助手</CardTitle>
+          <div className="mb-1 flex size-12 items-center justify-center rounded-lg bg-sidebar text-sidebar-foreground">
+            <ShieldCheck className="size-7 text-primary" aria-hidden="true" />
+          </div>
+          <CardTitle className="text-2xl font-extrabold tracking-tight">
+            企业知识助手
+          </CardTitle>
           <CardDescription>登录以访问知识库与智能问答</CardDescription>
         </CardHeader>
         <CardContent>
           {submitError ? (
             <div
-              className="mb-4 rounded-md bg-destructive/12 px-3 py-2 text-sm text-destructive"
+              className="mb-4 rounded-lg bg-destructive/12 px-3 py-2 text-sm text-destructive"
               role="alert"
             >
               {submitError}
@@ -98,13 +104,15 @@ export default function LoginPage() {
           ) : null}
 
           <form onSubmit={onSubmit} noValidate className="space-y-4">
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <Label htmlFor={emailId}>邮箱</Label>
               <Input
                 ref={emailRef}
                 id={emailId}
                 type="email"
                 autoComplete="email"
+                placeholder="you@company.com"
+                className="h-10 bg-background"
                 value={email}
                 onChange={(ev) => setEmail(ev.target.value)}
                 onBlur={validateEmail}
@@ -118,13 +126,15 @@ export default function LoginPage() {
               ) : null}
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <Label htmlFor={passwordId}>密码</Label>
               <Input
                 ref={passwordRef}
                 id={passwordId}
                 type="password"
                 autoComplete="current-password"
+                placeholder="至少 8 位"
+                className="h-10 bg-background"
                 value={password}
                 onChange={(ev) => setPassword(ev.target.value)}
                 onBlur={validatePassword}
@@ -138,7 +148,7 @@ export default function LoginPage() {
               ) : null}
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="h-11 w-full" disabled={loading}>
               {loading ? "登录中…" : "登录"}
             </Button>
           </form>

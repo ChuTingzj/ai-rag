@@ -1,32 +1,15 @@
-# Local design direction (Superdesign cloud unavailable)
+# Local design direction (Superdesign redesign 2026)
 
-Superdesign CLI login failed twice (TLS disconnect). Canvas drafts could not be created.
-This file records the locked design direction used for implementation.
+User chose **B + full site**, then **Cobalt Rail**, then **implement in code**.
 
-## Locked choices
+## Locked / shipped in `apps/web`
 
-- Full site: login, chat, kbs list/detail, jobs, AppShell
-- Keep existing teal enterprise palette and Plus Jakarta Sans
-- Layout / hierarchy polish only
-- Implement with shadcn/ui + Tailwind v4 + lucide-react
+- Palette: slate + cobalt (`#2563EB`), dark sidebar `#0B1220`, Manrope
+- Tokens in `apps/web/app/globals.css`
+- AppShell dark rail with primary active pill
+- Chat / Login / KBs / KB detail / Jobs aligned to Cobalt drafts
+- Canvas project remains source of design truth for iteration
 
-## Variation A (selected for implementation)
+## Canvas
 
-- Sidebar with stronger brand weight and nav active tint
-- Chat: two-pane desktop; citations Sheet on small screens
-- Composer as bottom card with Textarea + send Button
-- KB create via Dialog; detail via Tabs; status via Badge
-- Jobs page as Card list of recent jobs with empty state linking to KBs
-
-## Variation B (not selected)
-
-- Denser dashboard-style KB cards grid instead of table
-- Citations always as bottom drawer even on desktop
-
-## Pages in scope
-
-1. Login — centered Card
-2. Chat — AppShell + transcript + citations
-3. Knowledge bases — Table + Dialog
-4. Knowledge base detail — Tabs (documents / connector / jobs)
-5. Jobs — list Card with Status Badges
+https://superdesign.dev/teams/1ad63439-6656-46ad-aa1a-e83fee8223f8/projects/30fcf80a-86f9-4f34-b8e3-a2d814cd75c8

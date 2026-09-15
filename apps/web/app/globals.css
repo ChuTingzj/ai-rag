@@ -1,38 +1,38 @@
-@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,600;0,700;0,800;1,400&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: #f0fdfa;
-  --foreground: #134e4a;
+  --background: #f4f6f8;
+  --foreground: #0f172a;
   --card: #ffffff;
-  --card-foreground: #134e4a;
+  --card-foreground: #0f172a;
   --popover: #ffffff;
-  --popover-foreground: #134e4a;
-  --primary: #0d9488;
+  --popover-foreground: #0f172a;
+  --primary: #2563eb;
   --primary-foreground: #ffffff;
-  --secondary: #e8f1f4;
-  --secondary-foreground: #134e4a;
-  --muted: #e8f1f4;
-  --muted-foreground: #475569;
-  --accent: #ea580c;
+  --secondary: #eef2ff;
+  --secondary-foreground: #0f172a;
+  --muted: #e8ecf1;
+  --muted-foreground: #64748b;
+  --accent: #f59e0b;
   --accent-foreground: #ffffff;
   --destructive: #dc2626;
   --destructive-foreground: #ffffff;
-  --border: #99f6e4;
-  --input: #99f6e4;
-  --ring: #0d9488;
-  --radius: 0.5rem;
-  --sidebar: #ffffff;
-  --sidebar-foreground: #134e4a;
-  --sidebar-primary: #0d9488;
+  --border: #d5dce5;
+  --input: #d5dce5;
+  --ring: #2563eb;
+  --radius: 0.625rem;
+  --sidebar: #0b1220;
+  --sidebar-foreground: #e2e8f0;
+  --sidebar-primary: #2563eb;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e8f1f4;
-  --sidebar-accent-foreground: #134e4a;
-  --sidebar-border: #99f6e4;
-  --sidebar-ring: #0d9488;
-  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  --sidebar-accent: #1e293b;
+  --sidebar-accent-foreground: #e2e8f0;
+  --sidebar-border: #1e293b;
+  --sidebar-ring: #2563eb;
+  --font-sans: "Manrope", system-ui, sans-serif;
 }
 
 @theme inline {
@@ -67,7 +67,7 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-sans: "Manrope", system-ui, sans-serif;
 }
 
 @layer base {
