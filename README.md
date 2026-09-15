@@ -22,12 +22,12 @@ docker compose up -d postgres redis
 
 pnpm install
 pnpm db:migrate   # Turborepo: prisma generate → migrate deploy (auth + connectors)
-uv run alembic -c apps/api/alembic.ini upgrade head
+uv run rag-db-upgrade
 ```
 
 | Service | Generate | Apply | Location |
 | --- | --- | --- | --- |
-| `apps/api` (rag) | `alembic revision --autogenerate` | `alembic upgrade head` | [`apps/api/migrations/`](apps/api/migrations/) |
+| `apps/api` (rag) | `uv run rag-db-revision -- "<msg>"` | `uv run rag-db-upgrade` | [`apps/api/migrations/`](apps/api/migrations/) |
 | `apps/auth` | `prisma migrate diff` | `turbo run db:migrate --filter=@ai-rag/auth` | [`apps/auth/prisma/`](apps/auth/prisma/) |
 | `apps/connectors` | `prisma migrate diff` | `turbo run db:migrate --filter=@ai-rag/connectors` | [`apps/connectors/prisma/`](apps/connectors/prisma/) |
 
@@ -35,14 +35,14 @@ uv run alembic -c apps/api/alembic.ini upgrade head
 
 ```bash
 uv sync --all-groups
-uv run alembic -c apps/api/alembic.ini upgrade head
+uv run rag-db-upgrade
 uv run pytest tests/ -v
 ```
 
 Start the RAG API (behind the gateway in production):
 
 ```bash
-uv run uvicorn apps.api.app.main:app --reload --host 0.0.0.0 --port 8000
+uv run rag-serve
 ```
 
 ### 3. NestJS gateway + microservices (Turborepo)
@@ -82,7 +82,7 @@ Next rewrites `/api/v1/*` to the gateway (`API_PROXY_TARGET`, default `http://12
 
 ## M1 acceptance checklist
 
-- [ ] `docker compose up -d postgres redis`, then `pnpm db:migrate` and `uv run alembic -c apps/api/alembic.ini upgrade head`
+- [ ] `docker compose up -d postgres redis`, then `pnpm db:migrate` and `uv run rag-db-upgrade`
 - [ ] `uv run pytest tests/ -v` passes (Postgres on `localhost:15432`)
 - [ ] `uv run python -m rag.eval.run --pipeline hybrid --compare --out reports/m1.json` — metrics include `retrieval_hit_rate` and `citation_precision`; hybrid hit rate should meet or beat naive (warning only if not)
 - [ ] `./scripts/smoke_m1.sh` indexes `evals/m1/corpus` and writes `reports/smoke-m1.json`

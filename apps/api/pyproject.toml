@@ -19,6 +19,13 @@ dependencies = [
     "uvicorn[standard]>=0.32.0",
 ]
 
+[project.scripts]
+rag-db-upgrade = "app.cli:db_upgrade"
+rag-db-revision = "app.cli:db_revision"
+rag-db-current = "app.cli:db_current"
+rag-serve = "app.cli:serve"
+rag-worker = "app.cli:worker"
+
 [tool.uv.sources]
 rag = { workspace = true }
 

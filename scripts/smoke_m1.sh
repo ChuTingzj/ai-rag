@@ -22,7 +22,7 @@ done
 
 echo "==> Running migrations (Nest via Turbo, RAG via Alembic)"
 pnpm db:migrate
-uv run alembic -c apps/api/alembic.ini upgrade head
+uv run rag-db-upgrade
 
 echo "==> Indexing M1 eval corpus"
 uv run python -m rag.eval.run --pipeline hybrid --compare --out reports/smoke-m1.json
