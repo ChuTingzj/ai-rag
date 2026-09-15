@@ -91,7 +91,7 @@ services:
       [
         "sh",
         "-c",
-        "corepack enable && pnpm install --frozen-lockfile && pnpm --filter @ai-rag/nest-common build && pnpm --filter @ai-rag/auth prisma:generate && pnpm --filter @ai-rag/auth db:migrate && pnpm --filter @ai-rag/auth build && pnpm --filter @ai-rag/auth start:prod",
+        "corepack enable && pnpm install --frozen-lockfile && pnpm exec turbo run build --filter=@ai-rag/auth && pnpm --filter @ai-rag/auth start:prod",
       ]
     volumes:
       - .:/app
@@ -113,7 +113,7 @@ services:
       [
         "sh",
         "-c",
-        "corepack enable && pnpm install --frozen-lockfile && pnpm --filter @ai-rag/nest-common build && pnpm --filter @ai-rag/connectors prisma:generate && pnpm --filter @ai-rag/connectors db:migrate && pnpm --filter @ai-rag/connectors build && pnpm --filter @ai-rag/connectors start:prod",
+        "corepack enable && pnpm install --frozen-lockfile && pnpm exec turbo run build --filter=@ai-rag/connectors && pnpm --filter @ai-rag/connectors start:prod",
       ]
     volumes:
       - .:/app
@@ -139,7 +139,7 @@ services:
       [
         "sh",
         "-c",
-        "corepack enable && pnpm install --frozen-lockfile && pnpm --filter @ai-rag/nest-common build && pnpm --filter @ai-rag/gateway build && pnpm --filter @ai-rag/gateway start:prod",
+        "corepack enable && pnpm install --frozen-lockfile && pnpm exec turbo run build --filter=@ai-rag/gateway && pnpm --filter @ai-rag/gateway start:prod",
       ]
     volumes:
       - .:/app

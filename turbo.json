@@ -1,0 +1,24 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "prisma:generate": {
+      "inputs": ["prisma/schema.prisma"],
+      "outputs": ["src/generated/prisma/**"]
+    },
+    "db:migrate": {
+      "dependsOn": ["prisma:generate"],
+      "cache": false,
+      "env": ["AUTH_DATABASE_URL", "CONNECTORS_DATABASE_URL"]
+    },
+    "build": {
+      "dependsOn": ["^build", "db:migrate"],
+      "inputs": ["src/**", "tsconfig*.json", "nest-cli.json", "prisma/schema.prisma"],
+      "outputs": ["dist/**"]
+    },
+    "start:dev": {
+      "dependsOn": ["db:migrate"],
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

@@ -20,9 +20,9 @@ for _ in $(seq 1 30); do
   sleep 1
 done
 
-echo "==> Running migrations (per service)"
-./scripts/ensure-dbs.sh
-./scripts/migrate-all.sh
+echo "==> Running migrations (Nest via Turbo, RAG via Alembic)"
+pnpm db:migrate
+uv run alembic -c apps/api/alembic.ini upgrade head
 
 echo "==> Indexing M1 eval corpus"
 uv run python -m rag.eval.run --pipeline hybrid --compare --out reports/smoke-m1.json

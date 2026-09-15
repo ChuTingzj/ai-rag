@@ -127,10 +127,10 @@ Worker (arq): parse → chunk → embed → UPSERT chunks(+vector,+tsv)
 
 Identity：Gateway 校验 Bearer JWT 后向下游转发 `X-User-Id` + `X-Internal-Token`；下游不直接信任客户端 JWT。
 
-Databases（同一 Postgres 实例、三个逻辑库；**DDL 由各服务自己维护**）：
-- `rag` — KB/docs/chunks/jobs/traces（Alembic：`apps/api/migrations`）
-- `auth` — users（Prisma Migrate：`apps/auth/prisma/migrations`）
-- `connectors` — connectors（Prisma Migrate：`apps/connectors/prisma/migrations`）；ownership 经 RAG internal API 校验；worker 经 connectors internal API 取凭证
+Databases（同一 Postgres 实例、三个逻辑库；**DDL 由各服务 ORM 自动生成并自行 migrate**）：
+- `rag` — Alembic `revision --autogenerate` → `upgrade`（`apps/api/migrations`）
+- `auth` — Prisma `migrate diff` → `migrate deploy`（`apps/auth/prisma/migrations`）
+- `connectors` — Prisma `migrate diff` → `migrate deploy`（`apps/connectors/prisma/migrations`）
 
 ---
 

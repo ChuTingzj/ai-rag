@@ -4,11 +4,13 @@
   "packageManager": "pnpm@9.15.0",
   "scripts": {
     "link-env": "./scripts/link-env.sh",
-    "db:ensure": "./scripts/ensure-dbs.sh",
-    "db:migrate": "./scripts/migrate-all.sh",
-    "dev:gateway": "pnpm --filter @ai-rag/gateway start:dev",
-    "dev:auth": "pnpm --filter @ai-rag/auth start:dev",
-    "dev:connectors": "pnpm --filter @ai-rag/connectors start:dev",
-    "build:nest": "pnpm --filter @ai-rag/nest-common build && pnpm --filter @ai-rag/gateway build && pnpm --filter @ai-rag/auth build && pnpm --filter @ai-rag/connectors build"
+    "db:migrate": "turbo run db:migrate",
+    "dev:gateway": "turbo run start:dev --filter=@ai-rag/gateway",
+    "dev:auth": "turbo run start:dev --filter=@ai-rag/auth",
+    "dev:connectors": "turbo run start:dev --filter=@ai-rag/connectors",
+    "build:nest": "turbo run build --filter=@ai-rag/auth --filter=@ai-rag/connectors --filter=@ai-rag/gateway"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0"
   }
 }

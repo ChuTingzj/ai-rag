@@ -196,3 +196,9 @@ Cargo.lock
 
 # Superdesign temp
 .superdesign/tmp/
+
+# pnpm store
+.pnpm-store
+
+# turbo
+.turbo
