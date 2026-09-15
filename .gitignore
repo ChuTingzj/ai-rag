@@ -188,3 +188,6 @@ Cargo.lock
 # Superpowers / local worktrees
 .worktrees/
 .superpowers/
+
+# Superdesign temp
+.superdesign/tmp/

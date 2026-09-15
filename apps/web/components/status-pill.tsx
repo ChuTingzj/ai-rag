@@ -1,12 +1,15 @@
-import ui from "./ui.module.css";
+import { Badge } from "@/components/ui/badge";
 
-const STATUS_MAP: Record<string, { label: string; className: string }> = {
-  pending: { label: "待处理", className: ui.statusPending },
-  indexing: { label: "索引中", className: ui.statusIndexing },
-  ready: { label: "就绪", className: ui.statusReady },
-  failed: { label: "失败", className: ui.statusFailed },
-  completed: { label: "完成", className: ui.statusReady },
-  running: { label: "运行中", className: ui.statusIndexing },
+const STATUS_MAP: Record<
+  string,
+  { label: string; variant: "secondary" | "warning" | "success" | "destructive" }
+> = {
+  pending: { label: "待处理", variant: "secondary" },
+  indexing: { label: "索引中", variant: "warning" },
+  ready: { label: "就绪", variant: "success" },
+  failed: { label: "失败", variant: "destructive" },
+  completed: { label: "完成", variant: "success" },
+  running: { label: "运行中", variant: "warning" },
 };
 
 type StatusPillProps = {
@@ -17,11 +20,7 @@ export function StatusPill({ status }: StatusPillProps) {
   const key = status.toLowerCase();
   const mapped = STATUS_MAP[key] ?? {
     label: status,
-    className: ui.statusPending,
+    variant: "secondary" as const,
   };
-  return (
-    <span className={`${ui.statusPill} ${mapped.className}`}>
-      {mapped.label}
-    </span>
-  );
+  return <Badge variant={mapped.variant}>{mapped.label}</Badge>;
 }

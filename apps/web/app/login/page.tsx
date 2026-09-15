@@ -1,14 +1,21 @@
 "use client";
 
-import { ShieldCheck } from "@phosphor-icons/react";
+import { ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 
-import ui from "@/components/ui.module.css";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ApiError, apiFetch, type TokenResponse } from "@/lib/api-client";
 import { getAccessToken, setAccessToken } from "@/lib/auth-token";
-
-import styles from "./login.module.css";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -73,30 +80,29 @@ export default function LoginPage() {
   }
 
   return (
-    <div className={styles.page}>
-      <div className={styles.cardWrap}>
-        <div className={`${ui.card} ${styles.card}`}>
-          <header className={styles.header}>
-            <ShieldCheck size={32} weight="regular" aria-hidden="true" />
-            <h1 className={styles.title}>企业知识助手</h1>
-            <p className={styles.subtitle}>登录以访问知识库与智能问答</p>
-          </header>
-
+    <div className="grid min-h-screen place-items-center bg-background p-6">
+      <Card className="w-full max-w-[400px] animate-in fade-in slide-in-from-bottom-1 duration-300">
+        <CardHeader className="items-center text-center">
+          <ShieldCheck className="size-8 text-primary" aria-hidden="true" />
+          <CardTitle className="text-2xl font-extrabold">企业知识助手</CardTitle>
+          <CardDescription>登录以访问知识库与智能问答</CardDescription>
+        </CardHeader>
+        <CardContent>
           {submitError ? (
-            <div className={ui.errorSummary} role="alert">
+            <div
+              className="mb-4 rounded-md bg-destructive/12 px-3 py-2 text-sm text-destructive"
+              role="alert"
+            >
               {submitError}
             </div>
           ) : null}
 
-          <form onSubmit={onSubmit} noValidate>
-            <div className={ui.field}>
-              <label className={ui.label} htmlFor={emailId}>
-                邮箱
-              </label>
-              <input
+          <form onSubmit={onSubmit} noValidate className="space-y-4">
+            <div className="space-y-1">
+              <Label htmlFor={emailId}>邮箱</Label>
+              <Input
                 ref={emailRef}
                 id={emailId}
-                className={ui.input}
                 type="email"
                 autoComplete="email"
                 value={email}
@@ -106,20 +112,17 @@ export default function LoginPage() {
                 aria-describedby={emailError ? `${emailId}-err` : undefined}
               />
               {emailError ? (
-                <p id={`${emailId}-err`} className={styles.fieldError}>
+                <p id={`${emailId}-err`} className="text-xs text-destructive">
                   {emailError}
                 </p>
               ) : null}
             </div>
 
-            <div className={ui.field}>
-              <label className={ui.label} htmlFor={passwordId}>
-                密码
-              </label>
-              <input
+            <div className="space-y-1">
+              <Label htmlFor={passwordId}>密码</Label>
+              <Input
                 ref={passwordRef}
                 id={passwordId}
-                className={ui.input}
                 type="password"
                 autoComplete="current-password"
                 value={password}
@@ -129,22 +132,18 @@ export default function LoginPage() {
                 aria-describedby={passwordError ? `${passwordId}-err` : undefined}
               />
               {passwordError ? (
-                <p id={`${passwordId}-err`} className={styles.fieldError}>
+                <p id={`${passwordId}-err`} className="text-xs text-destructive">
                   {passwordError}
                 </p>
               ) : null}
             </div>
 
-            <button
-              type="submit"
-              className={`${ui.btnPrimary} ${styles.submit}`}
-              disabled={loading}
-            >
+            <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "登录中…" : "登录"}
-            </button>
+            </Button>
           </form>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

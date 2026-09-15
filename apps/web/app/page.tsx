@@ -1,19 +1,31 @@
 "use client";
 
-import { FileText, PaperPlaneTilt } from "@phosphor-icons/react";
+import { FileText, Send } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { AuthGate } from "@/components/auth-gate";
-import ui from "@/components/ui.module.css";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import {
   apiFetch,
   type CitationOut,
   type KnowledgeBaseOut,
   type QueryResponseOut,
 } from "@/lib/api-client";
-
-import styles from "./chat.module.css";
+import { cn } from "@/lib/utils";
 
 type ChatMessage =
   | { role: "user"; text: string }
@@ -24,6 +36,45 @@ const EXAMPLES = [
   "对比两个知识库中的政策差异",
   "列出最近上传文件的摘要",
 ];
+
+function CitationsPanel({
+  citations,
+  activeCitation,
+  onSelect,
+}: {
+  citations: CitationOut[];
+  activeCitation: string | null;
+  onSelect: (id: string) => void;
+}) {
+  if (citations.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">回答中的引用将显示在此</p>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {citations.map((c) => (
+        <button
+          key={c.evidence_id}
+          type="button"
+          className={cn(
+            "flex w-full gap-2 rounded-md border border-transparent bg-muted p-2 text-left text-xs text-foreground transition-colors hover:border-border",
+            activeCitation === c.evidence_id && "border-primary",
+          )}
+          onClick={() => onSelect(c.evidence_id)}
+        >
+          <FileText className="mt-0.5 size-[18px] shrink-0" aria-hidden="true" />
+          <span>
+            <strong>{c.title ?? "未命名文档"}</strong>
+            <br />
+            {c.snippet?.slice(0, 120) ?? "—"}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export default function ChatPage() {
   const kbSelectId = useId();
@@ -96,168 +147,165 @@ export default function ChatPage() {
   return (
     <AuthGate>
       <AppShell>
-        <div className={styles.layout}>
-          <section className={styles.transcript} aria-label="对话">
-            <div className={styles.toolbar}>
-              <label className={ui.label} htmlFor={kbSelectId}>
-                知识库
-              </label>
-              <select
-                id={kbSelectId}
-                className={ui.input}
-                value={selectedKb}
-                onChange={(e) => setSelectedKb(e.target.value)}
-                style={{ maxWidth: 360 }}
+        <div className="flex h-screen min-h-0 flex-1">
+          <section className="flex min-w-0 flex-1 flex-col border-r border-border" aria-label="对话">
+            <div className="sticky top-0 z-10 space-y-1 border-b border-border bg-card px-4 py-3 md:px-6">
+              <Label htmlFor={kbSelectId}>知识库</Label>
+              <Select
+                value={selectedKb || undefined}
+                onValueChange={setSelectedKb}
               >
-                {kbs.length === 0 ? (
-                  <option value="">暂无知识库</option>
-                ) : (
-                  kbs.map((kb) => (
-                    <option key={kb.id} value={kb.id}>
-                      {kb.name}
-                    </option>
-                  ))
-                )}
-              </select>
+                <SelectTrigger id={kbSelectId} className="max-w-sm">
+                  <SelectValue placeholder="暂无知识库" />
+                </SelectTrigger>
+                <SelectContent>
+                  {kbs.length === 0 ? (
+                    <SelectItem value="__empty" disabled>
+                      暂无知识库
+                    </SelectItem>
+                  ) : (
+                    kbs.map((kb) => (
+                      <SelectItem key={kb.id} value={kb.id}>
+                        {kb.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className={styles.messages}>
-              {messages.length === 0 ? (
-                <div className={styles.empty}>
-                  <p>输入问题开始检索与生成回答。</p>
-                  <div className={styles.examples}>
-                    {EXAMPLES.map((ex) => (
-                      <button
-                        key={ex}
-                        type="button"
-                        className={styles.chip}
-                        onClick={() => send(ex)}
-                      >
-                        {ex}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                messages.map((msg, i) =>
-                  msg.role === "user" ? (
-                    <div key={i} className={styles.messageUser}>
-                      {msg.text}
-                    </div>
-                  ) : (
-                    <div
-                      key={i}
-                      className={styles.messageAssistant}
-                      aria-busy={loading && i === messages.length - 1 ? true : undefined}
-                    >
-                      {msg.text}
-                      {msg.route ? (
-                        <span className={styles.routeBadge}>{msg.route}</span>
-                      ) : null}
-                      {msg.citations?.map((c) => (
-                        <p
-                          key={c.evidence_id}
-                          ref={(el) => {
-                            snippetRefs.current[c.evidence_id] = el;
-                          }}
-                          id={`cite-${c.evidence_id}`}
-                          style={{
-                            display: activeCitation === c.evidence_id ? "block" : "none",
-                            marginTop: "var(--space-sm)",
-                            fontSize: "0.8125rem",
-                            color: "var(--color-muted-foreground)",
-                          }}
+            <ScrollArea className="flex-1">
+              <div className="flex flex-col gap-4 p-4 md:p-6">
+                {messages.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">
+                    <p>输入问题开始检索与生成回答。</p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {EXAMPLES.map((ex) => (
+                        <button
+                          key={ex}
+                          type="button"
+                          className="rounded-full border border-border bg-muted px-3 py-1 text-xs transition-colors hover:bg-primary/10"
+                          onClick={() => void send(ex)}
                         >
-                          {c.snippet ?? c.title ?? "引用片段"}
-                        </p>
+                          {ex}
+                        </button>
                       ))}
                     </div>
-                  ),
-                )
-              )}
-              {loading ? (
-                <div className={styles.messageAssistant} aria-busy="true">
-                  <div className={ui.skeleton} style={{ height: 12, width: "80%" }} />
-                  <div
-                    className={ui.skeleton}
-                    style={{ height: 12, width: "60%", marginTop: 8 }}
-                  />
-                  <div
-                    className={ui.skeleton}
-                    style={{ height: 12, width: "70%", marginTop: 8 }}
-                  />
-                </div>
-              ) : null}
-            </div>
+                  </div>
+                ) : (
+                  messages.map((msg, i) =>
+                    msg.role === "user" ? (
+                      <div
+                        key={i}
+                        className="ml-auto max-w-[min(640px,90%)] rounded-md border border-border bg-primary/12 p-4 animate-in fade-in duration-200"
+                      >
+                        {msg.text}
+                      </div>
+                    ) : (
+                      <div
+                        key={i}
+                        className="mr-auto max-w-[min(720px,95%)] rounded-md border border-border bg-card p-4 animate-in fade-in duration-200"
+                        aria-busy={loading && i === messages.length - 1 ? true : undefined}
+                      >
+                        {msg.text}
+                        {msg.route ? (
+                          <Badge variant="secondary" className="ml-2 align-middle">
+                            {msg.route}
+                          </Badge>
+                        ) : null}
+                        {msg.citations?.map((c) => (
+                          <p
+                            key={c.evidence_id}
+                            ref={(el) => {
+                              snippetRefs.current[c.evidence_id] = el;
+                            }}
+                            id={`cite-${c.evidence_id}`}
+                            className={cn(
+                              "mt-2 text-[0.8125rem] text-muted-foreground",
+                              activeCitation === c.evidence_id ? "block" : "hidden",
+                            )}
+                          >
+                            {c.snippet ?? c.title ?? "引用片段"}
+                          </p>
+                        ))}
+                      </div>
+                    ),
+                  )
+                )}
+                {loading ? (
+                  <div className="mr-auto max-w-[min(720px,95%)] space-y-2 rounded-md border border-border bg-card p-4" aria-busy="true">
+                    <Skeleton className="h-3 w-4/5" />
+                    <Skeleton className="h-3 w-3/5" />
+                    <Skeleton className="h-3 w-[70%]" />
+                  </div>
+                ) : null}
+              </div>
+            </ScrollArea>
 
             <form
-              className={styles.composer}
+              className="flex items-end gap-3 border-t border-border bg-card px-4 py-3 md:px-6"
               onSubmit={(e) => {
                 e.preventDefault();
                 void send(question);
               }}
             >
-              <div style={{ flex: 1 }}>
-                <label className={ui.label} htmlFor={questionId}>
-                  问题
-                </label>
-                <textarea
+              <div className="min-w-0 flex-1 space-y-1">
+                <Label htmlFor={questionId}>问题</Label>
+                <Textarea
                   id={questionId}
-                  className={styles.textarea}
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
                   disabled={loading}
+                  className="min-h-[72px] resize-y"
                 />
               </div>
-              <button
+              <Button
                 type="button"
-                className={`${ui.btnSecondary} ${styles.drawerToggle}`}
-                onClick={() => setCitationsOpen((v) => !v)}
+                variant="secondary"
+                className="md:hidden"
+                onClick={() => setCitationsOpen(true)}
               >
                 引用
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
-                className={ui.btnPrimary}
+                size="icon"
                 disabled={loading || !selectedKb || !question.trim()}
                 aria-label="发送"
               >
-                <PaperPlaneTilt size={20} aria-hidden="true" />
-              </button>
+                <Send className="size-5" aria-hidden="true" />
+              </Button>
             </form>
           </section>
 
           <aside
-            className={`${styles.citations} ${citationsOpen ? styles.citationsOpen : ""}`}
+            className="hidden w-80 shrink-0 flex-col bg-card md:flex"
             aria-label="引用来源"
           >
-            <div className={styles.citationsHeader}>引用</div>
-            <div className={styles.citationList}>
-              {citations.length === 0 ? (
-                <p style={{ color: "var(--color-muted-foreground)", fontSize: "0.875rem" }}>
-                  回答中的引用将显示在此
-                </p>
-              ) : (
-                citations.map((c) => (
-                  <button
-                    key={c.evidence_id}
-                    type="button"
-                    className={`${styles.citationItem} ${
-                      activeCitation === c.evidence_id ? styles.citationItemActive : ""
-                    }`}
-                    onClick={() => focusCitation(c.evidence_id)}
-                  >
-                    <FileText size={18} aria-hidden="true" />
-                    <span>
-                      <strong>{c.title ?? "未命名文档"}</strong>
-                      <br />
-                      {c.snippet?.slice(0, 120) ?? "—"}
-                    </span>
-                  </button>
-                ))
-              )}
-            </div>
+            <div className="border-b border-border px-6 py-3 font-bold">引用</div>
+            <ScrollArea className="flex-1 p-4">
+              <CitationsPanel
+                citations={citations}
+                activeCitation={activeCitation}
+                onSelect={focusCitation}
+              />
+            </ScrollArea>
           </aside>
+
+          <Sheet open={citationsOpen} onOpenChange={setCitationsOpen}>
+            <SheetContent side="bottom" className="md:hidden">
+              <SheetHeader>
+                <SheetTitle>引用</SheetTitle>
+              </SheetHeader>
+              <div className="mt-4 max-h-[35vh] overflow-y-auto">
+                <CitationsPanel
+                  citations={citations}
+                  activeCitation={activeCitation}
+                  onSelect={focusCitation}
+                />
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </AppShell>
     </AuthGate>

@@ -1,13 +1,25 @@
 "use client";
 
-import { ArrowsClockwise, UploadSimple } from "@phosphor-icons/react";
+import { RefreshCw, Upload } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { AuthGate } from "@/components/auth-gate";
 import { StatusPill } from "@/components/status-pill";
-import ui from "@/components/ui.module.css";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiBaseUrl } from "@/lib/api-base";
 import {
   apiFetch,
@@ -17,10 +29,6 @@ import {
 } from "@/lib/api-client";
 import { getAccessToken } from "@/lib/auth-token";
 
-import styles from "../kbs.module.css";
-
-type Tab = "documents" | "connector" | "jobs";
-
 export default function KnowledgeBaseDetailPage() {
   const params = useParams<{ id: string }>();
   const kbId = params.id;
@@ -29,7 +37,7 @@ export default function KnowledgeBaseDetailPage() {
   const appSecretField = useId();
   const spaceIdField = useId();
 
-  const [tab, setTab] = useState<Tab>("documents");
+  const [tab, setTab] = useState("documents");
   const [kb, setKb] = useState<KnowledgeBaseOut | null>(null);
   const [docs, setDocs] = useState<DocumentOut[]>([]);
   const [jobs, setJobs] = useState<IndexJobOut[]>([]);
@@ -49,18 +57,21 @@ export default function KnowledgeBaseDetailPage() {
     setDocs(data);
   }, [kbId]);
 
-  const pollJob = useCallback(async (jobId: string) => {
-    const job = await apiFetch<IndexJobOut>(`/jobs/${jobId}`);
-    setJobs((prev) => {
-      const rest = prev.filter((j) => j.id !== jobId);
-      return [job, ...rest];
-    });
-    if (job.state === "pending" || job.state === "running") {
-      setTimeout(() => void pollJob(jobId), 1500);
-    } else {
-      void loadDocs();
-    }
-  }, [loadDocs]);
+  const pollJob = useCallback(
+    async (jobId: string) => {
+      const job = await apiFetch<IndexJobOut>(`/jobs/${jobId}`);
+      setJobs((prev) => {
+        const rest = prev.filter((j) => j.id !== jobId);
+        return [job, ...rest];
+      });
+      if (job.state === "pending" || job.state === "running") {
+        setTimeout(() => void pollJob(jobId), 1500);
+      } else {
+        void loadDocs();
+      }
+    },
+    [loadDocs],
+  );
 
   useEffect(() => {
     void loadKb();
@@ -125,59 +136,40 @@ export default function KnowledgeBaseDetailPage() {
   return (
     <AuthGate>
       <AppShell>
-        <div className={styles.page}>
-          <header className={styles.header}>
+        <div className="flex-1 p-6">
+          <header className="mb-4 flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h1 className={styles.title}>{kb?.name ?? "知识库"}</h1>
-              <p style={{ margin: 0, color: "var(--color-muted-foreground)" }}>
+              <h1 className="text-xl font-bold">{kb?.name ?? "知识库"}</h1>
+              <p className="m-0 text-sm text-muted-foreground">
                 {kb?.description ?? ""}
               </p>
             </div>
-            <button type="button" className={ui.btnSecondary} onClick={() => void triggerSync()}>
-              <ArrowsClockwise size={18} aria-hidden="true" />
+            <Button type="button" variant="secondary" onClick={() => void triggerSync()}>
+              <RefreshCw className="size-[18px]" aria-hidden="true" />
               同步飞书
-            </button>
+            </Button>
           </header>
 
           {message ? (
-            <p style={{ color: "var(--color-muted-foreground)", fontSize: "0.875rem" }}>{message}</p>
+            <p className="mb-4 text-sm text-muted-foreground">{message}</p>
           ) : null}
 
-          <div className={styles.tabs} role="tablist">
-            {(
-              [
-                ["documents", "文档"],
-                ["connector", "连接器"],
-                ["jobs", "任务"],
-              ] as const
-            ).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                role="tab"
-                aria-selected={tab === key}
-                className={`${styles.tab} ${tab === key ? styles.tabActive : ""}`}
-                onClick={() => setTab(key)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <Tabs value={tab} onValueChange={setTab}>
+            <TabsList>
+              <TabsTrigger value="documents">文档</TabsTrigger>
+              <TabsTrigger value="connector">连接器</TabsTrigger>
+              <TabsTrigger value="jobs">任务</TabsTrigger>
+            </TabsList>
 
-          {tab === "documents" ? (
-            <>
-              <div
-                className={styles.uploadZone}
-                role="button"
-                tabIndex={0}
+            <TabsContent value="documents" className="space-y-6">
+              <button
+                type="button"
+                className="w-full cursor-pointer rounded-md border-2 border-dashed border-border px-8 py-10 text-center transition-colors hover:bg-primary/[0.06]"
                 onClick={() => fileInputRef.current?.click()}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") fileInputRef.current?.click();
-                }}
                 aria-busy={uploading}
               >
-                <UploadSimple size={32} aria-hidden="true" />
-                <p>点击上传文档</p>
+                <Upload className="mx-auto size-8 text-muted-foreground" aria-hidden="true" />
+                <p className="mt-2 text-sm text-muted-foreground">点击上传文档</p>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -188,95 +180,105 @@ export default function KnowledgeBaseDetailPage() {
                     e.target.value = "";
                   }}
                 />
-              </div>
-              <table className={styles.table} style={{ marginTop: "var(--space-lg)" }}>
-                <thead>
-                  <tr>
-                    <th>标题</th>
-                    <th>来源</th>
-                    <th>状态</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {docs.map((d) => (
-                    <tr key={d.id}>
-                      <td>{d.title ?? "—"}</td>
-                      <td>{d.source}</td>
-                      <td>
-                        <StatusPill status={d.status} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </>
-          ) : null}
-
-          {tab === "connector" ? (
-            <form onSubmit={bindFeishu} className={ui.card} style={{ maxWidth: 480 }}>
-              <p style={{ marginTop: 0, fontSize: "0.875rem", color: "var(--color-muted-foreground)" }}>
-                绑定飞书 Wiki 空间以同步文档
-              </p>
-              <div className={ui.field}>
-                <label className={ui.label} htmlFor={appIdField}>
-                  App ID
-                </label>
-                <input
-                  id={appIdField}
-                  className={ui.input}
-                  value={appId}
-                  onChange={(e) => setAppId(e.target.value)}
-                  required
-                />
-              </div>
-              <div className={ui.field}>
-                <label className={ui.label} htmlFor={appSecretField}>
-                  App Secret
-                </label>
-                <input
-                  id={appSecretField}
-                  className={ui.input}
-                  type="password"
-                  value={appSecret}
-                  onChange={(e) => setAppSecret(e.target.value)}
-                  required
-                />
-              </div>
-              <div className={ui.field}>
-                <label className={ui.label} htmlFor={spaceIdField}>
-                  Space ID
-                </label>
-                <input
-                  id={spaceIdField}
-                  className={ui.input}
-                  value={spaceId}
-                  onChange={(e) => setSpaceId(e.target.value)}
-                  required
-                />
-              </div>
-              <button type="submit" className={ui.btnSecondary}>
-                绑定飞书
               </button>
-            </form>
-          ) : null}
 
-          {tab === "jobs" ? (
-            <div className={ui.card}>
-              {jobs.length === 0 ? (
-                <p style={{ color: "var(--color-muted-foreground)" }}>暂无任务记录</p>
-              ) : (
-                jobs.map((job) => (
-                  <div key={job.id} className={styles.jobRow}>
-                    <div style={{ display: "flex", gap: "var(--space-sm)", alignItems: "center" }}>
-                      <span>{job.job_type ?? "job"}</span>
-                      <StatusPill status={job.state ?? "pending"} />
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>标题</TableHead>
+                    <TableHead>来源</TableHead>
+                    <TableHead>状态</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {docs.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-muted-foreground">
+                        暂无文档
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    docs.map((d) => (
+                      <TableRow key={d.id}>
+                        <TableCell>{d.title ?? "—"}</TableCell>
+                        <TableCell>{d.source}</TableCell>
+                        <TableCell>
+                          <StatusPill status={d.status} />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TabsContent>
+
+            <TabsContent value="connector">
+              <Card className="max-w-md">
+                <CardContent className="space-y-4 pt-6">
+                  <p className="text-sm text-muted-foreground">
+                    绑定飞书 Wiki 空间以同步文档
+                  </p>
+                  <form onSubmit={bindFeishu} className="space-y-4">
+                    <div className="space-y-1">
+                      <Label htmlFor={appIdField}>App ID</Label>
+                      <Input
+                        id={appIdField}
+                        value={appId}
+                        onChange={(e) => setAppId(e.target.value)}
+                        required
+                      />
                     </div>
-                    {job.error ? <div className={styles.jobError}>{job.error}</div> : null}
-                  </div>
-                ))
-              )}
-            </div>
-          ) : null}
+                    <div className="space-y-1">
+                      <Label htmlFor={appSecretField}>App Secret</Label>
+                      <Input
+                        id={appSecretField}
+                        type="password"
+                        value={appSecret}
+                        onChange={(e) => setAppSecret(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor={spaceIdField}>Space ID</Label>
+                      <Input
+                        id={spaceIdField}
+                        value={spaceId}
+                        onChange={(e) => setSpaceId(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <Button type="submit" variant="secondary">
+                      绑定飞书
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="jobs">
+              <Card>
+                <CardContent className="pt-6">
+                  {jobs.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">暂无任务记录</p>
+                  ) : (
+                    <div className="divide-y divide-border">
+                      {jobs.map((job) => (
+                        <div key={job.id} className="py-2.5 text-[0.8125rem]">
+                          <div className="flex items-center gap-2">
+                            <span>{job.job_type ?? "job"}</span>
+                            <StatusPill status={job.state ?? "pending"} />
+                          </div>
+                          {job.error ? (
+                            <div className="mt-1 text-destructive">{job.error}</div>
+                          ) : null}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
       </AppShell>
     </AuthGate>

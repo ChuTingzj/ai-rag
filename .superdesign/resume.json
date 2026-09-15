@@ -1,0 +1,6 @@
+{
+  "note": "Superdesign cloud login failed (TLS). Local design direction used; see design-direction.md.",
+  "selectedDirection": "variation-a-layout-polish-teal",
+  "implementation": "shadcn-manual-scaffold",
+  "targets": ["/", "/login", "/kbs", "/kbs/[id]", "/jobs"]
+}

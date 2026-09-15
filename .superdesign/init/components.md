@@ -1,3 +1,99 @@
+# Shared UI components
+
+Framework: Next.js 16 App Router + React 19. Component library: **custom CSS Modules** (no shadcn yet). Icons: `@phosphor-icons/react`.
+
+## StatusPill
+
+- Path: `apps/web/components/status-pill.tsx`
+- Description: Maps job/document status strings to Chinese labels and pill styles
+- Props: `status: string`
+
+```tsx
+import ui from "./ui.module.css";
+
+const STATUS_MAP: Record<string, { label: string; className: string }> = {
+  pending: { label: "待处理", className: ui.statusPending },
+  indexing: { label: "索引中", className: ui.statusIndexing },
+  ready: { label: "就绪", className: ui.statusReady },
+  failed: { label: "失败", className: ui.statusFailed },
+  completed: { label: "完成", className: ui.statusReady },
+  running: { label: "运行中", className: ui.statusIndexing },
+};
+
+type StatusPillProps = {
+  status: string;
+};
+
+export function StatusPill({ status }: StatusPillProps) {
+  const key = status.toLowerCase();
+  const mapped = STATUS_MAP[key] ?? {
+    label: status,
+    className: ui.statusPending,
+  };
+  return (
+    <span className={`${ui.statusPill} ${mapped.className}`}>
+      {mapped.label}
+    </span>
+  );
+}
+```
+
+## AuthGate
+
+- Path: `apps/web/components/auth-gate.tsx`
+- Description: Client auth check; redirects to `/login` when no token
+- Props: `children: ReactNode`
+
+```tsx
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useEffect, useState, type ReactNode } from "react";
+
+import { getAccessToken } from "@/lib/auth-token";
+
+type AuthGateProps = {
+  children: ReactNode;
+};
+
+export function AuthGate({ children }: AuthGateProps) {
+  const router = useRouter();
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (!getAccessToken()) {
+      router.replace("/login");
+      return;
+    }
+    setReady(true);
+  }, [router]);
+
+  if (!ready) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "grid",
+          placeItems: "center",
+          background: "var(--color-background)",
+        }}
+        aria-busy="true"
+      >
+        <p style={{ color: "var(--color-muted-foreground)" }}>加载中…</p>
+      </div>
+    );
+  }
+
+  return children;
+}
+```
+
+## UI primitives (`ui.module.css`)
+
+- Path: `apps/web/components/ui.module.css`
+- Description: Shared button, input, label, field, card, error, status pill, skeleton classes
+
+```css
 .btnBase {
   display: inline-flex;
   align-items: center;
@@ -141,9 +237,4 @@
     background-position: -200% 0;
   }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .skeleton {
-    animation: none;
-  }
-}
+```

@@ -1,15 +1,31 @@
 "use client";
 
-import { Plus } from "@phosphor-icons/react";
+import { Plus } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useId, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { AuthGate } from "@/components/auth-gate";
-import ui from "@/components/ui.module.css";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { apiFetch, type KnowledgeBaseOut } from "@/lib/api-client";
-
-import styles from "./kbs.module.css";
 
 export default function KnowledgeBasesPage() {
   const nameId = useId();
@@ -63,104 +79,98 @@ export default function KnowledgeBasesPage() {
   return (
     <AuthGate>
       <AppShell>
-        <div className={styles.page}>
-          <header className={styles.header}>
-            <h1 className={styles.title}>知识库</h1>
-            <button
-              type="button"
-              className={ui.btnPrimary}
-              onClick={() => setModalOpen(true)}
-            >
-              <Plus size={18} aria-hidden="true" />
+        <div className="flex-1 p-6">
+          <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
+            <h1 className="text-xl font-bold">知识库</h1>
+            <Button type="button" onClick={() => setModalOpen(true)}>
+              <Plus className="size-[18px]" aria-hidden="true" />
               新建知识库
-            </button>
+            </Button>
           </header>
 
           {loading ? (
-            <div className={ui.skeleton} style={{ height: 120 }} aria-busy="true" />
+            <Skeleton className="h-[120px] w-full" aria-busy="true" />
           ) : (
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>名称</th>
-                  <th>描述</th>
-                  <th>创建时间</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>名称</TableHead>
+                  <TableHead>描述</TableHead>
+                  <TableHead>创建时间</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {kbs.length === 0 ? (
-                  <tr>
-                    <td colSpan={3} style={{ color: "var(--color-muted-foreground)" }}>
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-muted-foreground">
                       暂无知识库，点击「新建知识库」开始
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   kbs.map((kb) => (
-                    <tr key={kb.id}>
-                      <td>
-                        <Link href={`/kbs/${kb.id}`}>{kb.name}</Link>
-                      </td>
-                      <td>{kb.description ?? "—"}</td>
-                      <td>{new Date(kb.created_at).toLocaleString()}</td>
-                    </tr>
+                    <TableRow key={kb.id}>
+                      <TableCell>
+                        <Link
+                          href={`/kbs/${kb.id}`}
+                          className="font-semibold text-primary hover:underline"
+                        >
+                          {kb.name}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{kb.description ?? "—"}</TableCell>
+                      <TableCell>
+                        {new Date(kb.created_at).toLocaleString()}
+                      </TableCell>
+                    </TableRow>
                   ))
                 )}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           )}
 
-          {modalOpen ? (
-            <div
-              className={styles.modalBackdrop}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="create-kb-title"
-            >
-              <div className={`${ui.card} ${styles.modal}`}>
-                <h2 id="create-kb-title" className={styles.title}>
-                  新建知识库
-                </h2>
-                {error ? <div className={ui.errorSummary}>{error}</div> : null}
-                <form onSubmit={createKb}>
-                  <div className={ui.field}>
-                    <label className={ui.label} htmlFor={nameId}>
-                      名称
-                    </label>
-                    <input
-                      id={nameId}
-                      className={ui.input}
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className={ui.field}>
-                    <label className={ui.label} htmlFor={descId}>
-                      描述
-                    </label>
-                    <input
-                      id={descId}
-                      className={ui.input}
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                    />
-                  </div>
-                  <div style={{ display: "flex", gap: "var(--space-sm)", justifyContent: "flex-end" }}>
-                    <button
-                      type="button"
-                      className={ui.btnSecondary}
-                      onClick={() => setModalOpen(false)}
-                    >
-                      取消
-                    </button>
-                    <button type="submit" className={ui.btnPrimary} disabled={creating}>
-                      {creating ? "创建中…" : "创建"}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          ) : null}
+          <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+            <DialogContent className="max-w-[420px]">
+              <DialogHeader>
+                <DialogTitle>新建知识库</DialogTitle>
+              </DialogHeader>
+              {error ? (
+                <div className="rounded-md bg-destructive/12 px-3 py-2 text-sm text-destructive">
+                  {error}
+                </div>
+              ) : null}
+              <form onSubmit={createKb} className="space-y-4">
+                <div className="space-y-1">
+                  <Label htmlFor={nameId}>名称</Label>
+                  <Input
+                    id={nameId}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor={descId}>描述</Label>
+                  <Input
+                    id={descId}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                  />
+                </div>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => setModalOpen(false)}
+                  >
+                    取消
+                  </Button>
+                  <Button type="submit" disabled={creating}>
+                    {creating ? "创建中…" : "创建"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
       </AppShell>
     </AuthGate>
