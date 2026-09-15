@@ -127,10 +127,10 @@ Worker (arq): parse → chunk → embed → UPSERT chunks(+vector,+tsv)
 
 Identity：Gateway 校验 Bearer JWT 后向下游转发 `X-User-Id` + `X-Internal-Token`；下游不直接信任客户端 JWT。
 
-Databases（同一 Postgres 实例、三个逻辑库）：
-- `rag` — KB/docs/chunks/jobs/traces（Alembic）
-- `auth` — users（Prisma）
-- `connectors` — connectors（Prisma）；ownership 经 RAG internal API 校验；worker 经 connectors internal API 取凭证
+Databases（同一 Postgres 实例、三个逻辑库；**DDL 由各服务自己维护**）：
+- `rag` — KB/docs/chunks/jobs/traces（Alembic：`apps/api/migrations`）
+- `auth` — users（Prisma Migrate：`apps/auth/prisma/migrations`）
+- `connectors` — connectors（Prisma Migrate：`apps/connectors/prisma/migrations`）；ownership 经 RAG internal API 校验；worker 经 connectors internal API 取凭证
 
 ---
 
@@ -149,10 +149,14 @@ ai-rag/
 ├── pyproject.toml                 # uv workspace root
 ├── uv.lock
 ├── apps/
-│   ├── gateway/                   # NestJS API gateway (:8080)
-│   ├── auth/                      # NestJS auth microservice (:8081)
-│   ├── connectors/                # NestJS connectors microservice (:8082)
-│   ├── api/                       # FastAPI RAG-only (:8000)
+│   ├── gateway/                   # NestJS API gateway (:8080) — no DB
+│   ├── auth/                      # NestJS auth (:8081)
+│   │   └── prisma/migrations/     # owns DB `auth` DDL
+│   ├── connectors/                # NestJS connectors (:8082)
+│   │   └── prisma/migrations/     # owns DB `connectors` DDL
+│   ├── api/                       # FastAPI RAG (:8000)
+│   │   ├── alembic.ini
+│   │   ├── migrations/            # owns DB `rag` DDL (pgvector)
 │   │   └── app/
 │   │       ├── main.py
 │   │       ├── api/               # KB, docs, jobs, query + internal enqueue
@@ -177,7 +181,6 @@ ai-rag/
 │       ├── graph/                 # M4
 │       ├── eval/                  # harness
 │       └── domain/                # pydantic models / protocols
-├── migrations/                    # Alembic（含 vector extension）
 ├── tests/
 ├── evals/                         # golden sets + scripts
 └── docs/superpowers/

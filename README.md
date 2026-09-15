@@ -10,7 +10,7 @@ Enterprise knowledge assistant: NestJS gateway + Auth/Connectors microservices, 
 
 ## Quick start
 
-### 1. Infrastructure
+### 1. Infrastructure + per-service DDL
 
 ```bash
 cp .env.example .env
@@ -18,33 +18,31 @@ cp .env.example .env
 ./scripts/link-env.sh   # apps/*/.env → ../../.env (idempotent)
 
 docker compose up -d postgres redis
-# If the Postgres volume already existed before multi-DB support:
-./scripts/ensure-dbs.sh
-
-uv run alembic upgrade head
-# Auth / connectors schemas (Prisma owns those DBs):
-pnpm --filter @ai-rag/auth prisma:generate && pnpm --filter @ai-rag/auth prisma:push
-pnpm --filter @ai-rag/connectors prisma:generate && pnpm --filter @ai-rag/connectors prisma:push
+./scripts/ensure-dbs.sh   # create auth + connectors DBs if missing
+./scripts/migrate-all.sh  # each service applies its own migrations
 ```
+
+| Service | DDL tool | Location |
+| --- | --- | --- |
+| `apps/api` (rag DB) | Alembic | [`apps/api/alembic.ini`](apps/api/alembic.ini), [`apps/api/migrations/`](apps/api/migrations/) |
+| `apps/auth` | Prisma Migrate | [`apps/auth/prisma/`](apps/auth/prisma/) |
+| `apps/connectors` | Prisma Migrate | [`apps/connectors/prisma/`](apps/connectors/prisma/) |
 
 ### 2. Python (uv workspace)
 
 ```bash
 uv sync --all-groups
-uv run alembic upgrade head
+uv run alembic -c apps/api/alembic.ini upgrade head
 uv run pytest tests/ -v
 ```
 
 Start the RAG API (behind the gateway in production):
 
 ```bash
-export INTERNAL_SERVICE_TOKEN=dev-internal-token-change-me
 uv run uvicorn apps.api.app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### 3. NestJS gateway + microservices (managed with nest-cli)
-
-From the repo root (pnpm workspace: `apps/gateway`, `apps/auth`, `apps/connectors`, `packages/nest-common`):
 
 ```bash
 pnpm install
@@ -73,19 +71,17 @@ Next rewrites `/api/v1/*` to the gateway (`API_PROXY_TARGET`, default `http://12
 
 ## Repository layout
 
-- `apps/gateway` — NestJS API gateway (CORS, JWT, reverse proxy)
-- `apps/auth` — NestJS auth microservice (register/login/me) → DB `auth`
-- `apps/connectors` — NestJS connectors microservice (Feishu bind/sync) → DB `connectors`
-- `apps/api` — FastAPI RAG API (KB/docs/jobs/query + internal enqueue) → DB `rag`
+- `apps/gateway` — NestJS API gateway (CORS, JWT, reverse proxy) — no DB
+- `apps/auth` — NestJS auth + Prisma migrations → DB `auth`
+- `apps/connectors` — NestJS connectors + Prisma migrations → DB `connectors`
+- `apps/api` — FastAPI RAG + Alembic migrations → DB `rag`
 - `apps/web` — Next.js UI
 - `packages/rag` — Python domain library
 - `packages/nest-common` — shared Nest JWT/header helpers
 
-Databases (one Postgres, three logical DBs): `rag` (Alembic), `auth` / `connectors` (Prisma `db push`).
-
 ## M1 acceptance checklist
 
-- [ ] `docker compose up -d postgres redis` and `uv run alembic upgrade head`
+- [ ] `docker compose up -d postgres redis` and `./scripts/migrate-all.sh`
 - [ ] `uv run pytest tests/ -v` passes (Postgres on `localhost:15432`)
 - [ ] `uv run python -m rag.eval.run --pipeline hybrid --compare --out reports/m1.json` — metrics include `retrieval_hit_rate` and `citation_precision`; hybrid hit rate should meet or beat naive (warning only if not)
 - [ ] `./scripts/smoke_m1.sh` indexes `evals/m1/corpus` and writes `reports/smoke-m1.json`

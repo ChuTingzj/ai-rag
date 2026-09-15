@@ -4,6 +4,8 @@
   "packageManager": "pnpm@9.15.0",
   "scripts": {
     "link-env": "./scripts/link-env.sh",
+    "db:ensure": "./scripts/ensure-dbs.sh",
+    "db:migrate": "./scripts/migrate-all.sh",
     "dev:gateway": "pnpm --filter @ai-rag/gateway start:dev",
     "dev:auth": "pnpm --filter @ai-rag/auth start:dev",
     "dev:connectors": "pnpm --filter @ai-rag/connectors start:dev",
