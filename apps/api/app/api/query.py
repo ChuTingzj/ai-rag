@@ -9,8 +9,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from app.core.deps import get_async_session, get_current_user, get_orchestrator
-from app.db.models import Chunk, KnowledgeBase, QueryTrace, User
+from app.core.deps import Principal, get_async_session, get_current_user, get_orchestrator
+from app.db.models import Chunk, KnowledgeBase, QueryTrace
 from domain.models import QueryRequest
 from orchestrator.service import OrchestratorService
 from app.schemas.api import CitationOut, QueryRequestIn, QueryResponseOut
@@ -20,7 +20,7 @@ router = APIRouter(prefix="/query", tags=["query"])
 
 async def _resolve_query_kb_ids(
     session: AsyncSession,
-    user: User,
+    user: Principal,
     kb_ids: list[uuid.UUID],
 ) -> list[uuid.UUID]:
     if not kb_ids:
@@ -50,7 +50,7 @@ async def _resolve_query_kb_ids(
 @router.post("", response_model=QueryResponseOut)
 async def query(
     body: QueryRequestIn,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[Principal, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_async_session)],
     orchestrator: Annotated[OrchestratorService, Depends(get_orchestrator)],
 ) -> QueryResponseOut:

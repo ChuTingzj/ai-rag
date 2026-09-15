@@ -7,11 +7,9 @@ from typing import Any
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
-    Boolean,
     DateTime,
     ForeignKey,
     Integer,
-    LargeBinary,
     Numeric,
     String,
     Text,
@@ -26,34 +24,18 @@ from db.base import Base
 _EMBEDDING_DIM = int(os.environ.get("EMBEDDING_DIM", "1024"))
 
 
-class User(Base):
-    __tablename__ = "users"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    email: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
-    password_hash: Mapped[str] = mapped_column(Text, nullable=False)
-    roles: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, server_default="{}")
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
-    )
-
-    knowledge_bases: Mapped[list[KnowledgeBase]] = relationship(back_populates="creator")
-
-
 class KnowledgeBase(Base):
     __tablename__ = "knowledge_bases"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(Text, nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
-    created_by: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
-    )
+    # Soft reference to auth-service user id (no cross-DB FK).
+    created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    creator: Mapped[User | None] = relationship(back_populates="knowledge_bases")
     documents: Mapped[list[Document]] = relationship(back_populates="knowledge_base")
 
 
@@ -120,17 +102,6 @@ class IndexJob(Base):
     )
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-
-
-class Connector(Base):
-    __tablename__ = "connectors"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    kb_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
-    type: Mapped[str | None] = mapped_column(Text)
-    config_encrypted: Mapped[bytes | None] = mapped_column(LargeBinary)
-    cursor: Mapped[str | None] = mapped_column(Text)
-    enabled: Mapped[bool | None] = mapped_column(Boolean)
 
 
 class QueryTrace(Base):

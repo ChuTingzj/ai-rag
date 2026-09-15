@@ -127,6 +127,11 @@ Worker (arq): parse → chunk → embed → UPSERT chunks(+vector,+tsv)
 
 Identity：Gateway 校验 Bearer JWT 后向下游转发 `X-User-Id` + `X-Internal-Token`；下游不直接信任客户端 JWT。
 
+Databases（同一 Postgres 实例、三个逻辑库）：
+- `rag` — KB/docs/chunks/jobs/traces（Alembic）
+- `auth` — users（Prisma）
+- `connectors` — connectors（Prisma）；ownership 经 RAG internal API 校验；worker 经 connectors internal API 取凭证
+
 ---
 
 ## 5. 仓库与模块结构

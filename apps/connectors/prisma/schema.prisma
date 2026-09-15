@@ -5,17 +5,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL_NEST")
-}
-
-model KnowledgeBase {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name        String
-  description String?
-  createdBy   String?  @map("created_by") @db.Uuid
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  @@map("knowledge_bases")
+  url      = env("CONNECTORS_DATABASE_URL")
 }
 
 model Connector {
@@ -27,19 +17,4 @@ model Connector {
   enabled         Boolean?
 
   @@map("connectors")
-}
-
-model IndexJob {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  kbId       String?   @map("kb_id") @db.Uuid
-  documentId String?   @map("document_id") @db.Uuid
-  jobType    String?   @map("job_type")
-  state      String?
-  error      String?
-  stats      Json?
-  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  startedAt  DateTime? @map("started_at") @db.Timestamptz(6)
-  finishedAt DateTime? @map("finished_at") @db.Timestamptz(6)
-
-  @@map("index_jobs")
 }

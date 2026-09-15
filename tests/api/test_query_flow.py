@@ -7,14 +7,10 @@ from dataclasses import dataclass
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from sqlalchemy.orm import Session, sessionmaker
 
 from app.core import deps
 from app.core.config import settings
-from app.core.security import hash_password
-from app.db.models import User
 from app.main import app
 from domain.models import LLMResult, Message
 from ingest.pipeline import run_ingest
@@ -28,13 +24,6 @@ def _async_database_url() -> str:
         "DATABASE_URL",
         "postgresql+asyncpg://rag:rag@localhost:15432/rag",
     )
-
-
-def _sync_database_url() -> str:
-    url = _async_database_url()
-    if url.startswith("postgresql+asyncpg://"):
-        return url.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
-    return url
 
 
 @dataclass
@@ -104,26 +93,8 @@ def _gateway_headers(user_id: uuid.UUID) -> dict[str, str]:
     }
 
 
-def _register_user(email: str, password: str = "secure-pass-123") -> uuid.UUID:
-    engine = create_engine(_sync_database_url())
-    SessionLocal = sessionmaker(bind=engine, class_=Session, expire_on_commit=False)
-    with SessionLocal() as session:
-        user = User(
-            email=email,
-            password_hash=hash_password(password),
-            roles=["user"],
-        )
-        session.add(user)
-        session.commit()
-        session.refresh(user)
-        user_id = user.id
-    engine.dispose()
-    return user_id
-
-
 def test_register_kb_upload_wait_query(api_client: TestClient, tmp_path):
-    email = f"user-{uuid.uuid4()}@example.com"
-    user_id = _register_user(email)
+    user_id = uuid.uuid4()
     headers = _gateway_headers(user_id)
 
     kb = api_client.post(
@@ -183,10 +154,7 @@ def test_register_kb_upload_wait_query(api_client: TestClient, tmp_path):
 
 
 def test_query_rejects_foreign_kb_id(api_client: TestClient):
-    owner_email = f"owner-{uuid.uuid4()}@example.com"
-    attacker_email = f"attacker-{uuid.uuid4()}@example.com"
-
-    owner_headers = _gateway_headers(_register_user(owner_email))
+    owner_headers = _gateway_headers(uuid.uuid4())
     kb = api_client.post(
         "/api/v1/knowledge-bases",
         headers=owner_headers,
@@ -195,7 +163,7 @@ def test_query_rejects_foreign_kb_id(api_client: TestClient):
     assert kb.status_code == 201, kb.text
     foreign_kb_id = kb.json()["id"]
 
-    attacker_headers = _gateway_headers(_register_user(attacker_email))
+    attacker_headers = _gateway_headers(uuid.uuid4())
     denied = api_client.post(
         "/api/v1/query",
         headers=attacker_headers,
@@ -205,10 +173,7 @@ def test_query_rejects_foreign_kb_id(api_client: TestClient):
 
 
 def test_query_empty_kb_ids_scopes_to_owned_only(api_client: TestClient, tmp_path):
-    owner_email = f"owner-{uuid.uuid4()}@example.com"
-    other_email = f"other-{uuid.uuid4()}@example.com"
-
-    owner_headers = _gateway_headers(_register_user(owner_email))
+    owner_headers = _gateway_headers(uuid.uuid4())
     kb = api_client.post(
         "/api/v1/knowledge-bases",
         headers=owner_headers,
@@ -248,7 +213,7 @@ def test_query_empty_kb_ids_scopes_to_owned_only(api_client: TestClient, tmp_pat
     assert owned_empty.status_code == 200, owned_empty.text
     assert "3000" in owned_empty.json()["answer"] or owned_empty.json()["citations"]
 
-    other_headers = _gateway_headers(_register_user(other_email))
+    other_headers = _gateway_headers(uuid.uuid4())
     no_kb = api_client.post(
         "/api/v1/query",
         headers=other_headers,

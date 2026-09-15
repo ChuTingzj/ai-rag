@@ -8,7 +8,8 @@
     "start:dev": "prisma generate && nest start --watch",
     "start:prod": "node dist/main.js",
     "prebuild": "prisma generate",
-    "prisma:generate": "prisma generate"
+    "prisma:generate": "prisma generate",
+    "prisma:push": "prisma db push"
   },
   "dependencies": {
     "@ai-rag/nest-common": "workspace:*",

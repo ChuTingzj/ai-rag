@@ -18,6 +18,13 @@ cp .env.example .env
 ./scripts/link-env.sh   # apps/*/.env → ../../.env (idempotent)
 
 docker compose up -d postgres redis
+# If the Postgres volume already existed before multi-DB support:
+./scripts/ensure-dbs.sh
+
+uv run alembic upgrade head
+# Auth / connectors schemas (Prisma owns those DBs):
+pnpm --filter @ai-rag/auth prisma:generate && pnpm --filter @ai-rag/auth prisma:push
+pnpm --filter @ai-rag/connectors prisma:generate && pnpm --filter @ai-rag/connectors prisma:push
 ```
 
 ### 2. Python (uv workspace)
@@ -42,7 +49,6 @@ From the repo root (pnpm workspace: `apps/gateway`, `apps/auth`, `apps/connector
 ```bash
 pnpm install
 pnpm --filter @ai-rag/nest-common build
-# Prisma reads DATABASE_URL_NEST from the package .env symlink
 pnpm --filter @ai-rag/auth prisma:generate
 pnpm --filter @ai-rag/connectors prisma:generate
 ```
@@ -68,12 +74,14 @@ Next rewrites `/api/v1/*` to the gateway (`API_PROXY_TARGET`, default `http://12
 ## Repository layout
 
 - `apps/gateway` — NestJS API gateway (CORS, JWT, reverse proxy)
-- `apps/auth` — NestJS auth microservice (register/login/me)
-- `apps/connectors` — NestJS connectors microservice (Feishu bind/sync)
-- `apps/api` — FastAPI RAG API (KB/docs/jobs/query + internal enqueue)
+- `apps/auth` — NestJS auth microservice (register/login/me) → DB `auth`
+- `apps/connectors` — NestJS connectors microservice (Feishu bind/sync) → DB `connectors`
+- `apps/api` — FastAPI RAG API (KB/docs/jobs/query + internal enqueue) → DB `rag`
 - `apps/web` — Next.js UI
 - `packages/rag` — Python domain library
 - `packages/nest-common` — shared Nest JWT/header helpers
+
+Databases (one Postgres, three logical DBs): `rag` (Alembic), `auth` / `connectors` (Prisma `db push`).
 
 ## M1 acceptance checklist
 

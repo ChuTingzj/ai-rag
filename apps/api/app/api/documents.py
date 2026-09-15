@@ -10,14 +10,14 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.deps import IngestQueue, get_async_session, get_current_user, get_ingest_queue
-from app.db.models import Document, IndexJob, KnowledgeBase, User
+from app.core.deps import IngestQueue, Principal, get_async_session, get_current_user, get_ingest_queue
+from app.db.models import Document, IndexJob, KnowledgeBase
 from app.schemas.api import DocumentOut, DocumentUploadOut
 
 router = APIRouter(prefix="/knowledge-bases/{kb_id}/documents", tags=["documents"])
 
 
-async def _get_owned_kb(kb_id: uuid.UUID, user: User, session: AsyncSession) -> KnowledgeBase:
+async def _get_owned_kb(kb_id: uuid.UUID, user: Principal, session: AsyncSession) -> KnowledgeBase:
     kb = await session.get(KnowledgeBase, kb_id)
     if kb is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Knowledge base not found")
@@ -29,7 +29,7 @@ async def _get_owned_kb(kb_id: uuid.UUID, user: User, session: AsyncSession) -> 
 @router.get("", response_model=list[DocumentOut])
 async def list_documents(
     kb_id: uuid.UUID,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[Principal, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_async_session)],
 ) -> list[Document]:
     await _get_owned_kb(kb_id, user, session)
@@ -42,7 +42,7 @@ async def list_documents(
 @router.post("", response_model=DocumentUploadOut, status_code=status.HTTP_201_CREATED)
 async def upload_document(
     kb_id: uuid.UUID,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[Principal, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_async_session)],
     queue: Annotated[IngestQueue, Depends(get_ingest_queue)],
     file: UploadFile = File(...),

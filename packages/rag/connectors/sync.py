@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import hashlib
 import uuid
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Awaitable, Callable
+from typing import Any
 
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -11,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from connectors.base import decrypt_connector_config
 from connectors.feishu import FeishuConnector
-from db.models import Connector, Document, IndexJob
+from db.models import Document, IndexJob
 from domain.models import RawDocument
 
 
@@ -23,7 +25,16 @@ class FeishuSyncStats(BaseModel):
     errors: list[str] = Field(default_factory=list)
 
 
+@dataclass(slots=True)
+class ConnectorSnapshot:
+    id: uuid.UUID
+    config_encrypted: bytes
+    cursor: str | None
+
+
 EnqueueIngest = Callable[[uuid.UUID], Awaitable[None]]
+LoadConnector = Callable[[], Awaitable[ConnectorSnapshot]]
+SaveCursor = Callable[[str | None], Awaitable[None]]
 
 
 async def run_feishu_sync(
@@ -33,29 +44,30 @@ async def run_feishu_sync(
     data_dir: str,
     encryption_secret: str,
     enqueue_ingest: EnqueueIngest,
+    load_connector: LoadConnector,
+    save_cursor: SaveCursor,
     connector: FeishuConnector | None = None,
 ) -> FeishuSyncStats:
     stats = FeishuSyncStats(kb_id=kb_id)
 
+    connector_row = await load_connector()
+    if not connector_row.config_encrypted:
+        raise ValueError("Feishu connector is not configured")
+
+    config = decrypt_connector_config(
+        connector_row.config_encrypted,
+        secret=encryption_secret,
+    )
+
+    feishu = connector or FeishuConnector(
+        app_id=str(config["app_id"]),
+        app_secret=str(config["app_secret"]),
+        space_id=str(config["space_id"]),
+    )
+
     async with session_factory() as session:
-        connector_row = await _load_feishu_connector(session, kb_id)
-        if connector_row.config_encrypted is None:
-            raise ValueError("Feishu connector is not configured")
-
-        config = decrypt_connector_config(
-            connector_row.config_encrypted,
-            secret=encryption_secret,
-        )
-        cursor = connector_row.cursor
-
-        feishu = connector or FeishuConnector(
-            app_id=str(config["app_id"]),
-            app_secret=str(config["app_secret"]),
-            space_id=str(config["space_id"]),
-        )
-
         async with feishu:
-            page = await feishu.list_changes(cursor)
+            page = await feishu.list_changes(connector_row.cursor)
             stats.next_cursor = page.next_cursor
 
             for change in page.changes:
@@ -84,20 +96,10 @@ async def run_feishu_sync(
                 except Exception as exc:
                     stats.errors.append(f"{external_id}: {exc}")
 
-            connector_row.cursor = page.next_cursor
             await session.commit()
 
+    await save_cursor(page.next_cursor)
     return stats
-
-
-async def _load_feishu_connector(session: AsyncSession, kb_id: uuid.UUID) -> Connector:
-    result = await session.execute(
-        select(Connector).where(Connector.kb_id == kb_id, Connector.type == "feishu").limit(1)
-    )
-    row = result.scalar_one_or_none()
-    if row is None:
-        raise ValueError("Feishu connector is not bound to this knowledge base")
-    return row
 
 
 async def _persist_raw_document(

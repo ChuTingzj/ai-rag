@@ -7,8 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_async_session, get_current_user
-from app.db.models import KnowledgeBase, User
+from app.core.deps import Principal, get_async_session, get_current_user
+from app.db.models import KnowledgeBase
 from app.schemas.api import KnowledgeBaseCreate, KnowledgeBaseOut, KnowledgeBaseUpdate
 
 router = APIRouter(prefix="/knowledge-bases", tags=["knowledge-bases"])
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/knowledge-bases", tags=["knowledge-bases"])
 
 @router.get("", response_model=list[KnowledgeBaseOut])
 async def list_knowledge_bases(
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[Principal, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_async_session)],
 ) -> list[KnowledgeBase]:
     result = await session.execute(
@@ -28,7 +28,7 @@ async def list_knowledge_bases(
 @router.post("", response_model=KnowledgeBaseOut, status_code=status.HTTP_201_CREATED)
 async def create_knowledge_base(
     body: KnowledgeBaseCreate,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[Principal, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_async_session)],
 ) -> KnowledgeBase:
     kb = KnowledgeBase(
@@ -44,7 +44,7 @@ async def create_knowledge_base(
 
 async def _get_owned_kb(
     kb_id: uuid.UUID,
-    user: User,
+    user: Principal,
     session: AsyncSession,
 ) -> KnowledgeBase:
     kb = await session.get(KnowledgeBase, kb_id)
@@ -58,7 +58,7 @@ async def _get_owned_kb(
 @router.get("/{kb_id}", response_model=KnowledgeBaseOut)
 async def get_knowledge_base(
     kb_id: uuid.UUID,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[Principal, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_async_session)],
 ) -> KnowledgeBase:
     return await _get_owned_kb(kb_id, user, session)
@@ -68,7 +68,7 @@ async def get_knowledge_base(
 async def update_knowledge_base(
     kb_id: uuid.UUID,
     body: KnowledgeBaseUpdate,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[Principal, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_async_session)],
 ) -> KnowledgeBase:
     kb = await _get_owned_kb(kb_id, user, session)
@@ -84,7 +84,7 @@ async def update_knowledge_base(
 @router.delete("/{kb_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_knowledge_base(
     kb_id: uuid.UUID,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[Principal, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_async_session)],
 ) -> None:
     kb = await _get_owned_kb(kb_id, user, session)

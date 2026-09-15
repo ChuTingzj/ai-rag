@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     jwt_secret: str = ""
     internal_service_token: str = ""
+    connectors_service_url: str = "http://127.0.0.1:8082"
+    connector_encryption_secret: str = ""
     data_dir: str = "./data"
 
 

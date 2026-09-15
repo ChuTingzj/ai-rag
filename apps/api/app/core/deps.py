@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import AsyncGenerator
+from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import Annotated, Protocol
 
@@ -12,7 +13,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from acl.gateway import AclGateway
 from app.core.config import settings
-from app.db.models import User
 from app.db.session import async_session_factory
 from domain.protocols import LLMProvider
 from generate.generator import Generator
@@ -21,6 +21,14 @@ from providers.registry import Settings as RagSettings
 from providers.registry import get_embedding, get_llm as build_llm, get_reranker
 from retrieve.hybrid import HybridRetriever
 from retrieve.packer import ContextPacker
+
+
+@dataclass(frozen=True, slots=True)
+class Principal:
+    """Gateway-authenticated identity (auth DB is separate; no local user row)."""
+
+    id: uuid.UUID
+    roles: list[str] = field(default_factory=list)
 
 
 class IngestQueue(Protocol):
@@ -89,10 +97,10 @@ def require_internal_token(
 
 
 async def get_current_user(
-    session: Annotated[AsyncSession, Depends(get_async_session)],
     _: Annotated[None, Depends(require_internal_token)],
     x_user_id: Annotated[str | None, Header()] = None,
-) -> User:
+    x_user_roles: Annotated[str | None, Header()] = None,
+) -> Principal:
     if not x_user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     try:
@@ -102,11 +110,8 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid user id",
         ) from exc
-
-    user = await session.get(User, user_id)
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-    return user
+    roles = [r for r in (x_user_roles or "").split(",") if r]
+    return Principal(id=user_id, roles=roles)
 
 
 def get_ingest_queue() -> IngestQueue:

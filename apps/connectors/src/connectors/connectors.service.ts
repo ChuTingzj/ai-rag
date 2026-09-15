@@ -30,15 +30,37 @@ export class ConnectorsService {
     return secret;
   }
 
+  private ragBase(): string {
+    return process.env.RAG_API_URL ?? "http://127.0.0.1:8000";
+  }
+
+  private internalHeaders(userId?: string, requestId?: string): Record<string, string> {
+    const headers: Record<string, string> = {
+      [HEADER_INTERNAL_TOKEN]: process.env.INTERNAL_SERVICE_TOKEN ?? "",
+    };
+    if (userId) headers[HEADER_USER_ID] = userId;
+    if (requestId) headers[HEADER_REQUEST_ID] = requestId;
+    return headers;
+  }
+
   private async requireOwnedKb(kbId: string, userId: string) {
-    const kb = await this.prisma.knowledgeBase.findUnique({ where: { id: kbId } });
-    if (!kb) {
+    const response = await fetch(
+      `${this.ragBase()}/internal/v1/knowledge-bases/${kbId}/owner`,
+      { headers: this.internalHeaders(userId) },
+    );
+    if (response.status === 404) {
       throw new NotFoundException("Knowledge base not found");
     }
-    if (kb.createdBy !== userId) {
+    if (!response.ok) {
+      const text = await response.text();
+      throw new ServiceUnavailableException(
+        `Failed to verify KB ownership: ${response.status} ${text}`,
+      );
+    }
+    const body = (await response.json()) as { created_by: string | null };
+    if (body.created_by !== userId) {
       throw new ForbiddenException("Forbidden");
     }
-    return kb;
   }
 
   async bindFeishu(kbId: string, userId: string, body: FeishuConnectorCreateDto) {
@@ -89,25 +111,13 @@ export class ConnectorsService {
       throw new BadRequestException("Bind a Feishu connector before syncing");
     }
 
-    const job = await this.prisma.indexJob.create({
-      data: {
-        kbId,
-        jobType: "feishu_sync",
-        state: "pending",
-      },
-    });
-
-    const ragBase = process.env.RAG_API_URL ?? "http://127.0.0.1:8000";
-    const internalToken = process.env.INTERNAL_SERVICE_TOKEN ?? "";
-    const response = await fetch(`${ragBase}/internal/v1/enqueue/feishu-sync`, {
+    const response = await fetch(`${this.ragBase()}/internal/v1/enqueue/feishu-sync`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        [HEADER_INTERNAL_TOKEN]: internalToken,
-        [HEADER_USER_ID]: userId,
-        ...(requestId ? { [HEADER_REQUEST_ID]: requestId } : {}),
+        ...this.internalHeaders(userId, requestId),
       },
-      body: JSON.stringify({ kb_id: kbId, job_id: job.id }),
+      body: JSON.stringify({ kb_id: kbId }),
     });
 
     if (!response.ok) {
@@ -117,6 +127,37 @@ export class ConnectorsService {
       );
     }
 
-    return { job_id: job.id };
+    const payload = (await response.json()) as { job_id: string };
+    return { job_id: payload.job_id };
+  }
+
+  async getFeishuByKb(kbId: string) {
+    const connector = await this.prisma.connector.findFirst({
+      where: { kbId, type: "feishu", enabled: true },
+    });
+    if (!connector || !connector.configEncrypted) {
+      throw new NotFoundException("Feishu connector not found");
+    }
+    return {
+      id: connector.id,
+      kb_id: connector.kbId,
+      type: connector.type,
+      cursor: connector.cursor,
+      config_encrypted_b64: Buffer.from(connector.configEncrypted).toString("base64"),
+    };
+  }
+
+  async updateCursor(connectorId: string, cursor: string | null) {
+    const connector = await this.prisma.connector.findUnique({
+      where: { id: connectorId },
+    });
+    if (!connector) {
+      throw new NotFoundException("Connector not found");
+    }
+    await this.prisma.connector.update({
+      where: { id: connectorId },
+      data: { cursor },
+    });
+    return { id: connectorId, cursor };
   }
 }

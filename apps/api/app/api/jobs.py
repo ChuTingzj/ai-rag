@@ -6,8 +6,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_async_session, get_current_user
-from app.db.models import IndexJob, KnowledgeBase, User
+from app.core.deps import Principal, get_async_session, get_current_user
+from app.db.models import IndexJob, KnowledgeBase
 from app.schemas.api import IndexJobOut
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/jobs", tags=["jobs"])
 @router.get("/{job_id}", response_model=IndexJobOut)
 async def get_job(
     job_id: uuid.UUID,
-    user: Annotated[User, Depends(get_current_user)],
+    user: Annotated[Principal, Depends(get_current_user)],
     session: Annotated[AsyncSession, Depends(get_async_session)],
 ) -> IndexJob:
     job = await session.get(IndexJob, job_id)
