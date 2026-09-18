@@ -97,6 +97,7 @@ def worker() -> None:
     raise SystemExit(
         subprocess.call(
             [sys.executable, "-m", "arq", "app.workers.tasks.WorkerSettings"],
-            cwd=_REPO_ROOT / "apps" / "api",
+            # Same cwd as serve() so relative DATA_DIR / raw_path resolve correctly.
+            cwd=_REPO_ROOT,
         )
     )

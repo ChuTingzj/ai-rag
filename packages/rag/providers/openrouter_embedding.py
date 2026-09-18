@@ -26,7 +26,7 @@ class OpenRouterEmbedding:
         return self._dim
 
     async def _embed_batch(self, texts: list[str]) -> list[list[float]]:
-        payload = {"model": self._model, "input": texts}
+        payload: dict = {"model": self._model, "input": texts, "dimensions": self._dim}
         url = f"{self._base_url}/embeddings"
         headers = {
             "Authorization": f"Bearer {self._api_key}",
@@ -40,7 +40,14 @@ class OpenRouterEmbedding:
         response.raise_for_status()
         data = response.json()
         items = sorted(data["data"], key=lambda row: row["index"])
-        return [row["embedding"] for row in items]
+        vectors = [row["embedding"] for row in items]
+        for vector in vectors:
+            if len(vector) != self._dim:
+                raise ValueError(
+                    f"Embedding dim mismatch: got {len(vector)}, expected {self._dim} "
+                    f"(model={self._model!r}). Ensure the provider honors `dimensions`."
+                )
+        return vectors
 
     async def embed_documents(self, texts: list[str]) -> list[list[float]]:
         if not texts:

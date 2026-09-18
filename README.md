@@ -34,10 +34,12 @@ uv run rag-db-upgrade
 ### 2. Python (uv workspace)
 
 ```bash
-uv sync --all-groups
+uv sync --all-groups --extra local-ml
 uv run rag-db-upgrade
 uv run pytest tests/ -v
 ```
+
+`local-ml` installs `sentence-transformers` (+ torch) for `EMBEDDING_PROVIDER=local_bge_m3` and `RERANK_PROVIDER=bge_reranker`. On Intel Mac, torch is pinned to 2.2.x (no newer wheels); prefer `EMBEDDING_PROVIDER=openrouter` + `RERANK_PROVIDER=stub` there.
 
 Start the RAG API (behind the gateway in production):
 

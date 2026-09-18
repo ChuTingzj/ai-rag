@@ -56,34 +56,55 @@ async def upload_document(
     if not raw_bytes:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Empty file")
 
-    doc_id = uuid.uuid4()
+    checksum = hashlib.sha256(raw_bytes).hexdigest()
+    existing = (
+        await session.execute(
+            select(Document).where(
+                Document.kb_id == kb_id,
+                Document.source == "upload",
+                Document.external_id == checksum,
+            )
+        )
+    ).scalar_one_or_none()
+
+    doc_id = existing.id if existing is not None else uuid.uuid4()
     safe_name = Path(file.filename).name
     dest_dir = Path(settings.data_dir) / str(kb_id) / str(doc_id)
     dest_dir.mkdir(parents=True, exist_ok=True)
-    dest_path = dest_dir / safe_name
+    dest_path = (dest_dir / safe_name).resolve()
     dest_path.write_bytes(raw_bytes)
 
-    checksum = hashlib.sha256(raw_bytes).hexdigest()
     mime = file.content_type or "application/octet-stream"
-    document = Document(
-        id=doc_id,
-        kb_id=kb_id,
-        source="upload",
-        external_id=checksum,
-        title=safe_name,
-        uri=f"/files/{kb_id}/{doc_id}/{safe_name}",
-        mime_type=mime,
-        status="pending",
-        checksum=checksum,
-        raw_path=str(dest_path),
-    )
+    uri = f"/files/{kb_id}/{doc_id}/{safe_name}"
+    if existing is None:
+        document = Document(
+            id=doc_id,
+            kb_id=kb_id,
+            source="upload",
+            external_id=checksum,
+            title=safe_name,
+            uri=uri,
+            mime_type=mime,
+            status="pending",
+            checksum=checksum,
+            raw_path=str(dest_path),
+        )
+        session.add(document)
+    else:
+        document = existing
+        document.title = safe_name
+        document.uri = uri
+        document.mime_type = mime
+        document.checksum = checksum
+        document.raw_path = str(dest_path)
+        document.status = "pending"
+
     job = IndexJob(
         kb_id=kb_id,
         document_id=doc_id,
         job_type="ingest",
         state="pending",
     )
-    session.add(document)
     session.add(job)
     await session.commit()
     await session.refresh(document)

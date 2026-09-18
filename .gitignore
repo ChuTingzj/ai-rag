@@ -202,3 +202,5 @@ Cargo.lock
 
 # turbo
 .turbo
+
+data/

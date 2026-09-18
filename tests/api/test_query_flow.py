@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import io
 import os
 import time
 import uuid
@@ -151,6 +152,40 @@ def test_register_kb_upload_wait_query(api_client: TestClient, tmp_path):
     cite = payload["citations"][0]
     assert cite["evidence_id"]
     assert cite.get("title") == "expense.md" or cite.get("title")
+
+
+def test_reupload_same_content_reuses_document(api_client: TestClient) -> None:
+    user_id = uuid.uuid4()
+    headers = _gateway_headers(user_id)
+
+    kb = api_client.post(
+        "/api/v1/knowledge-bases",
+        headers=headers,
+        json={"name": "Dup upload", "description": None},
+    )
+    assert kb.status_code == 201, kb.text
+    kb_id = kb.json()["id"]
+
+    payload = b"# Same file\n\ncontent for checksum dedupe.\n"
+    first = api_client.post(
+        f"/api/v1/knowledge-bases/{kb_id}/documents",
+        headers=headers,
+        files={"file": ("research.md", io.BytesIO(payload), "text/markdown")},
+    )
+    assert first.status_code == 201, first.text
+    first_body = first.json()
+    doc_id = first_body["document"]["id"]
+
+    second = api_client.post(
+        f"/api/v1/knowledge-bases/{kb_id}/documents",
+        headers=headers,
+        files={"file": ("research.md", io.BytesIO(payload), "text/markdown")},
+    )
+    assert second.status_code == 201, second.text
+    second_body = second.json()
+    assert second_body["document"]["id"] == doc_id
+    assert second_body["job_id"] != first_body["job_id"]
+    assert second_body["document"]["status"] in {"pending", "indexing", "ready"}
 
 
 def test_query_rejects_foreign_kb_id(api_client: TestClient):

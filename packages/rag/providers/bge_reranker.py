@@ -39,7 +39,7 @@ class BgeReranker:
                 except ImportError as exc:
                     raise ImportError(
                         "bge_reranker requires optional deps: "
-                        "uv sync --package rag --extra local-ml"
+                        "uv sync --all-groups --extra local-ml"
                     ) from exc
 
                 self._model = await asyncio.to_thread(

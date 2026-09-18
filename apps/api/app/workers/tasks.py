@@ -115,3 +115,6 @@ async def sync_feishu(_ctx: dict, kb_id: str, job_id: str) -> dict:
 class WorkerSettings:
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
     functions = [ingest_document, sync_feishu]
+    # First ingest may download BAAI/bge-m3 (~2GB) before encoding.
+    job_timeout = 3600
+    max_tries = 3

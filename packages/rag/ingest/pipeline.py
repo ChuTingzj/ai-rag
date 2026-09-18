@@ -59,19 +59,28 @@ async def run_ingest(
             job.state = "succeeded"
             job.stats = stats.model_dump(mode="json")
             job.error = None
-        except Exception as exc:
-            document.status = "failed"
-            job.state = "failed"
-            job.error = str(exc)
-            stats.errors.append(str(exc))
-            raise
-        finally:
             job.finished_at = datetime.now(UTC)
             if stats.duration_ms == 0:
                 stats.duration_ms = int(
                     (job.finished_at - started).total_seconds() * 1000
                 )
             await session.commit()
+        except Exception as exc:
+            await session.rollback()
+            document = await session.get(Document, document_id)
+            job = await _ensure_index_job(session, document) if document is not None else None
+            finished = datetime.now(UTC)
+            if document is not None:
+                document.status = "failed"
+            if job is not None:
+                job.state = "failed"
+                job.error = str(exc)
+                job.finished_at = finished
+            stats.errors.append(str(exc))
+            if stats.duration_ms == 0:
+                stats.duration_ms = int((finished - started).total_seconds() * 1000)
+            await session.commit()
+            raise
 
     return stats
 

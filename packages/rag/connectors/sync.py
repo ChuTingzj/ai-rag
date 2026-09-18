@@ -127,7 +127,7 @@ async def _persist_raw_document(
     doc_id = existing.id if existing is not None else uuid.uuid4()
     dest_dir = Path(data_dir) / str(kb_id) / str(doc_id)
     dest_dir.mkdir(parents=True, exist_ok=True)
-    dest_path = dest_dir / safe_name
+    dest_path = (dest_dir / safe_name).resolve()
     dest_path.write_bytes(raw.content)
 
     if existing is None:
