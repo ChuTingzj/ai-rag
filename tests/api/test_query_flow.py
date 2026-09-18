@@ -152,6 +152,54 @@ def test_register_kb_upload_wait_query(api_client: TestClient, tmp_path):
     cite = payload["citations"][0]
     assert cite["evidence_id"]
     assert cite.get("title") == "expense.md" or cite.get("title")
+    assert cite.get("document_id")
+    assert cite.get("kb_id") == kb_id
+
+
+def test_document_content_preview(api_client: TestClient, tmp_path):
+    user_id = uuid.uuid4()
+    headers = _gateway_headers(user_id)
+
+    kb = api_client.post(
+        "/api/v1/knowledge-bases",
+        headers=headers,
+        json={"name": "Preview KB", "description": None},
+    )
+    assert kb.status_code == 201, kb.text
+    kb_id = kb.json()["id"]
+
+    payload = "# Preview doc\n\n费用上限为 3000 元。\n".encode("utf-8")
+    upload = api_client.post(
+        f"/api/v1/knowledge-bases/{kb_id}/documents",
+        headers=headers,
+        files={"file": ("preview.md", io.BytesIO(payload), "text/markdown")},
+    )
+    assert upload.status_code == 201, upload.text
+    doc_id = upload.json()["document"]["id"]
+
+    content = api_client.get(
+        f"/api/v1/knowledge-bases/{kb_id}/documents/{doc_id}/content",
+        headers=headers,
+    )
+    assert content.status_code == 200, content.text
+    body = content.json()
+    assert body["id"] == doc_id
+    assert body["kb_id"] == kb_id
+    assert body["title"] == "preview.md"
+    assert body["mime_type"] == "text/markdown"
+    assert "费用上限为 3000 元" in body["content"]
+
+    missing = api_client.get(
+        f"/api/v1/knowledge-bases/{kb_id}/documents/{uuid.uuid4()}/content",
+        headers=headers,
+    )
+    assert missing.status_code == 404, missing.text
+
+    foreign = api_client.get(
+        f"/api/v1/knowledge-bases/{kb_id}/documents/{doc_id}/content",
+        headers=_gateway_headers(uuid.uuid4()),
+    )
+    assert foreign.status_code == 403, foreign.text
 
 
 def test_reupload_same_content_reuses_document(api_client: TestClient) -> None:

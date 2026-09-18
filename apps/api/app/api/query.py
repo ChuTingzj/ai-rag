@@ -108,6 +108,7 @@ async def _enrich_citations(session: AsyncSession, citations) -> list[CitationOu
             CitationOut(
                 evidence_id=cite.evidence_id,
                 document_id=chunk.document_id if chunk else None,
+                kb_id=doc.kb_id if doc else None,
                 title=cite.title or (doc.title if doc else None),
                 uri=cite.uri or (doc.uri if doc else None),
                 snippet=chunk.text[:500] if chunk else None,

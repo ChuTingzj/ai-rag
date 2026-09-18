@@ -6,13 +6,14 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from ingest.parse import parse_file
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.deps import IngestQueue, Principal, get_async_session, get_current_user, get_ingest_queue
 from app.db.models import Document, IndexJob, KnowledgeBase
-from app.schemas.api import DocumentOut, DocumentUploadOut
+from app.schemas.api import DocumentContentOut, DocumentOut, DocumentUploadOut
 
 router = APIRouter(prefix="/knowledge-bases/{kb_id}/documents", tags=["documents"])
 
@@ -37,6 +38,44 @@ async def list_documents(
         select(Document).where(Document.kb_id == kb_id).order_by(Document.created_at.desc())
     )
     return list(result.scalars().all())
+
+
+@router.get("/{document_id}/content", response_model=DocumentContentOut)
+async def get_document_content(
+    kb_id: uuid.UUID,
+    document_id: uuid.UUID,
+    user: Annotated[Principal, Depends(get_current_user)],
+    session: Annotated[AsyncSession, Depends(get_async_session)],
+) -> DocumentContentOut:
+    await _get_owned_kb(kb_id, user, session)
+    document = await session.get(Document, document_id)
+    if document is None or document.kb_id != kb_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
+    if not document.raw_path:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Document has no stored file",
+        )
+
+    path = Path(document.raw_path)
+    if not path.is_file():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document file not found")
+
+    try:
+        content = parse_file(path, document.mime_type)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
+    return DocumentContentOut(
+        id=document.id,
+        kb_id=document.kb_id,
+        title=document.title,
+        mime_type=document.mime_type,
+        content=content,
+    )
 
 
 @router.post("", response_model=DocumentUploadOut, status_code=status.HTTP_201_CREATED)

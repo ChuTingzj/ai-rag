@@ -68,6 +68,14 @@ class DocumentUploadOut(BaseModel):
     job_id: uuid.UUID
 
 
+class DocumentContentOut(BaseModel):
+    id: uuid.UUID
+    kb_id: uuid.UUID
+    title: str | None
+    mime_type: str | None
+    content: str
+
+
 class IndexJobOut(BaseModel):
     id: uuid.UUID
     kb_id: uuid.UUID | None
@@ -92,6 +100,7 @@ class QueryRequestIn(BaseModel):
 class CitationOut(BaseModel):
     evidence_id: uuid.UUID
     document_id: uuid.UUID | None = None
+    kb_id: uuid.UUID | None = None
     title: str | None = None
     uri: str | None = None
     snippet: str | None = None

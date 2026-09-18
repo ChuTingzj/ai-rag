@@ -1,10 +1,13 @@
 "use client";
 
-import { FileText, Send } from "lucide-react";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { Send } from "lucide-react";
+import { useCallback, useEffect, useId, useState } from "react";
 
+import { AnswerCitations } from "@/components/answer-citations";
 import { AppShell } from "@/components/app-shell";
 import { AuthGate } from "@/components/auth-gate";
+import { DocumentPreviewSheet } from "@/components/document-preview-sheet";
+import { MarkdownMessage } from "@/components/markdown-message";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -16,7 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -25,7 +27,6 @@ import {
   type KnowledgeBaseOut,
   type QueryResponseOut,
 } from "@/lib/api-client";
-import { cn } from "@/lib/utils";
 
 type ChatMessage =
   | { role: "user"; text: string }
@@ -37,48 +38,6 @@ const EXAMPLES = [
   "列出最近上传文件的摘要",
 ];
 
-function CitationsPanel({
-  citations,
-  activeCitation,
-  onSelect,
-}: {
-  citations: CitationOut[];
-  activeCitation: string | null;
-  onSelect: (id: string) => void;
-}) {
-  if (citations.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground">回答中的引用将显示在此</p>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-3">
-      {citations.map((c) => (
-        <button
-          key={c.evidence_id}
-          type="button"
-          className={cn(
-            "flex w-full gap-3 rounded-lg border border-border bg-muted/60 p-3 text-left text-xs text-foreground transition-colors hover:border-primary/40",
-            activeCitation === c.evidence_id && "border-primary bg-secondary",
-          )}
-          onClick={() => onSelect(c.evidence_id)}
-        >
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-card text-primary">
-            <FileText className="size-4" aria-hidden="true" />
-          </span>
-          <span className="min-w-0">
-            <strong className="block text-sm">{c.title ?? "未命名文档"}</strong>
-            <span className="mt-1 block leading-relaxed text-muted-foreground">
-              {c.snippet?.slice(0, 120) ?? "—"}
-            </span>
-          </span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
 export default function ChatPage() {
   const kbSelectId = useId();
   const questionId = useId();
@@ -87,13 +46,10 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
-  const [activeCitation, setActiveCitation] = useState<string | null>(null);
-  const [citationsOpen, setCitationsOpen] = useState(false);
-  const snippetRefs = useRef<Record<string, HTMLParagraphElement | null>>({});
-
-  const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
-  const citations =
-    lastAssistant?.role === "assistant" ? lastAssistant.citations ?? [] : [];
+  const [previewCitation, setPreviewCitation] = useState<CitationOut | null>(
+    null,
+  );
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
     apiFetch<KnowledgeBaseOut[]>("/knowledge-bases")
@@ -104,6 +60,11 @@ export default function ChatPage() {
       .catch(() => setKbs([]));
   }, []);
 
+  const openPreview = useCallback((citation: CitationOut) => {
+    setPreviewCitation(citation);
+    setPreviewOpen(true);
+  }, []);
+
   const send = useCallback(
     async (text: string) => {
       const q = text.trim();
@@ -112,7 +73,6 @@ export default function ChatPage() {
       setMessages((prev) => [...prev, { role: "user", text: q }]);
       setQuestion("");
       setLoading(true);
-      setActiveCitation(null);
 
       try {
         const res = await apiFetch<QueryResponseOut>("/query", {
@@ -128,7 +88,6 @@ export default function ChatPage() {
             citations: res.citations,
           },
         ]);
-        if (res.citations.length > 0) setCitationsOpen(true);
       } catch {
         setMessages((prev) => [
           ...prev,
@@ -141,18 +100,12 @@ export default function ChatPage() {
     [loading, selectedKb],
   );
 
-  function focusCitation(id: string) {
-    setActiveCitation(id);
-    const el = snippetRefs.current[id];
-    el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }
-
   return (
     <AuthGate>
       <AppShell>
         <div className="flex h-screen min-h-0 flex-1">
           <section
-            className="flex min-w-0 flex-1 flex-col border-r border-border"
+            className="flex min-w-0 flex-1 flex-col"
             aria-label="对话"
           >
             <div className="sticky top-0 z-10 flex items-end gap-4 border-b border-border bg-card/90 px-4 py-4 backdrop-blur md:px-6">
@@ -198,7 +151,7 @@ export default function ChatPage() {
 
             <ScrollArea className="flex-1 bg-background">
               <div className="mx-auto flex max-w-3xl flex-col gap-5 px-4 py-8 md:px-6">
-                {messages.length === 0 ? (
+                {messages.length === 0 && !loading ? (
                   <div className="rounded-lg border border-dashed border-border bg-card px-5 py-6 text-sm text-muted-foreground">
                     <p className="font-semibold text-foreground">
                       输入问题开始检索与生成回答。
@@ -228,10 +181,7 @@ export default function ChatPage() {
                     ) : (
                       <div
                         key={i}
-                        className="mr-auto max-w-[min(720px,92%)] rounded-lg border border-border bg-card px-4 py-4 text-sm leading-relaxed shadow-[0_1px_2px_rgb(15_23_42_/_0.06)] animate-in fade-in duration-200"
-                        aria-busy={
-                          loading && i === messages.length - 1 ? true : undefined
-                        }
+                        className="mr-auto w-full max-w-[min(720px,92%)] rounded-lg border border-border bg-card px-4 py-4 text-sm leading-relaxed shadow-[0_1px_2px_rgb(15_23_42_/_0.06)] animate-in fade-in duration-200"
                       >
                         {msg.route ? (
                           <div className="mb-2">
@@ -240,34 +190,35 @@ export default function ChatPage() {
                             </Badge>
                           </div>
                         ) : null}
-                        {msg.text}
-                        {msg.citations?.map((c) => (
-                          <p
-                            key={c.evidence_id}
-                            ref={(el) => {
-                              snippetRefs.current[c.evidence_id] = el;
-                            }}
-                            id={`cite-${c.evidence_id}`}
-                            className={cn(
-                              "mt-2 text-[0.8125rem] text-muted-foreground",
-                              activeCitation === c.evidence_id ? "block" : "hidden",
-                            )}
-                          >
-                            {c.snippet ?? c.title ?? "引用片段"}
-                          </p>
-                        ))}
+                        <MarkdownMessage
+                          content={msg.text}
+                          citations={msg.citations}
+                          onSelectCitation={openPreview}
+                        />
+                        {msg.citations && msg.citations.length > 0 ? (
+                          <AnswerCitations
+                            citations={msg.citations}
+                            onSelect={openPreview}
+                          />
+                        ) : null}
                       </div>
                     ),
                   )
                 )}
                 {loading ? (
                   <div
-                    className="mr-auto max-w-[min(720px,92%)] space-y-2 rounded-lg border border-border bg-card p-4"
+                    className="mr-auto w-full max-w-[min(720px,92%)] space-y-3 rounded-lg border border-border bg-card px-4 py-4 shadow-[0_1px_2px_rgb(15_23_42_/_0.06)] animate-in fade-in duration-200"
                     aria-busy="true"
+                    aria-live="polite"
                   >
-                    <Skeleton className="h-3 w-4/5" />
-                    <Skeleton className="h-3 w-3/5" />
-                    <Skeleton className="h-3 w-[70%]" />
+                    <p className="text-sm text-muted-foreground">
+                      正在检索与生成回答…
+                    </p>
+                    <div className="space-y-2">
+                      <Skeleton className="h-3 w-48" />
+                      <Skeleton className="h-3 w-36" />
+                      <Skeleton className="h-3 w-40" />
+                    </div>
                   </div>
                 ) : null}
               </div>
@@ -295,14 +246,6 @@ export default function ChatPage() {
                   />
                 </div>
                 <Button
-                  type="button"
-                  variant="secondary"
-                  className="md:hidden"
-                  onClick={() => setCitationsOpen(true)}
-                >
-                  引用
-                </Button>
-                <Button
                   type="submit"
                   size="icon"
                   disabled={loading || !selectedKb || !question.trim()}
@@ -313,43 +256,13 @@ export default function ChatPage() {
               </form>
             </div>
           </section>
-
-          <aside
-            className="hidden w-[22rem] shrink-0 flex-col bg-card md:flex"
-            aria-label="引用来源"
-          >
-            <div className="flex items-center justify-between border-b border-border px-5 py-4">
-              <h2 className="text-sm font-bold tracking-tight">引用来源</h2>
-              {citations.length > 0 ? (
-                <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
-                  {citations.length}
-                </span>
-              ) : null}
-            </div>
-            <ScrollArea className="flex-1 p-4">
-              <CitationsPanel
-                citations={citations}
-                activeCitation={activeCitation}
-                onSelect={focusCitation}
-              />
-            </ScrollArea>
-          </aside>
-
-          <Sheet open={citationsOpen} onOpenChange={setCitationsOpen}>
-            <SheetContent side="bottom" className="md:hidden">
-              <SheetHeader>
-                <SheetTitle>引用</SheetTitle>
-              </SheetHeader>
-              <div className="mt-4 max-h-[35vh] overflow-y-auto">
-                <CitationsPanel
-                  citations={citations}
-                  activeCitation={activeCitation}
-                  onSelect={focusCitation}
-                />
-              </div>
-            </SheetContent>
-          </Sheet>
         </div>
+        <DocumentPreviewSheet
+          citation={previewCitation}
+          fallbackKbId={selectedKb}
+          open={previewOpen}
+          onOpenChange={setPreviewOpen}
+        />
       </AppShell>
     </AuthGate>
   );

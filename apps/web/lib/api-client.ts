@@ -73,6 +73,13 @@ export type DocumentOut = {
   status: string;
   created_at: string;
 };
+export type DocumentContentOut = {
+  id: string;
+  kb_id: string;
+  title: string | null;
+  mime_type: string | null;
+  content: string;
+};
 export type DocumentUploadOut = { document: DocumentOut; job_id: string };
 export type IndexJobOut = {
   id: string;
@@ -89,6 +96,7 @@ export type IndexJobOut = {
 export type CitationOut = {
   evidence_id: string;
   document_id: string | null;
+  kb_id: string | null;
   title: string | null;
   uri: string | null;
   snippet: string | null;

@@ -1,5 +1,6 @@
 from app.schemas.api import (
     CitationOut,
+    DocumentContentOut,
     DocumentOut,
     IndexJobOut,
     KnowledgeBaseCreate,
@@ -15,6 +16,7 @@ from app.schemas.api import (
 
 __all__ = [
     "CitationOut",
+    "DocumentContentOut",
     "DocumentOut",
     "IndexJobOut",
     "KnowledgeBaseCreate",
